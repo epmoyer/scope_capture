@@ -160,8 +160,51 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 
 	log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
 
-	// TODO: Read the rest of the data
-	panic("stop here for development")
+	for len(buff) < expectedBuffLengthBytes {
+		log.Printf(
+			"Received LESS data than expected: (%d out of %d expected 'buff' bytes; %d remaining)",
+			len(buff),
+			expectedBuffLengthBytes,
+			expectedBuffLengthBytes-len(buff))
+
+		// Set a read deadline for reading the response
+		err = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		if err != nil {
+			return fmt.Errorf("failed to set read deadline: %v", err)
+		}
+
+		// Use bufio.Reader to read until newline
+		reader := bufio.NewReader(conn)
+		response, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				log.Print("commandRaw(): Reached EOF while reading response.")
+			} else {
+				return fmt.Errorf("failed to read SCPI response: %v", err)
+			}
+		}
+		buff = append(buff, response...)
+
+		// wait
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if len(buff) < expectedBuffLengthBytes {
+		log.Printf(
+			"after reading all data chunks, 'buff' is still shorter then expected!"+
+				" (%d out of %d expected 'buff' bytes.)",
+			len(buff),
+			expectedBuffLengthBytes)
+		return errors.New("failed to read all expected buffer data")
+	}
+
+	// Strip TMC Blockheader and keep only the data
+	// FIXME: This truncates any extra data, which sweeps that "error" under the rug.
+	// We should handle this better by failing explicitly if the size is LARGER than expected.
+	// For now, mirroring the original behavior.
+	tmcHeaderLen := tmcHeaderBytes(buff)
+	expectedDataLen := expectedDataBytes(buff)
+	buff = buff[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
 
 	img, _, err := image.Decode(bytes.NewReader(buff))
 	if err != nil {
