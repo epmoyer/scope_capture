@@ -132,7 +132,7 @@ func (log LoggerT) Errorf(format string, a ...interface{}) {
 }
 
 func (log LoggerT) ErrorPrint(msg string) {
-	fmt.Println(msg)
+	fmt.Println("ERROR: " + msg)
 	log.Error(msg)
 }
 

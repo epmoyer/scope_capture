@@ -89,8 +89,7 @@ func main() {
 	if err = run(
 		flagHostname, flagFilename, "png", flagNote,
 		[]string{flagLabel1, flagLabel2, flagLabel3, flagLabel4}); err != nil {
-		log.Errorf("Error: %v", err)
-		fmt.Printf("Error: %v\n", err)
+		log.ErrorPrintf("%v", err)
 	}
 }
 
@@ -125,16 +124,16 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 func testPing(hostname string) error {
 	conn, err := net.DialTimeout("tcp", hostname+":"+defaultPort, 2*time.Second)
 	if err != nil {
-		log.Printf("Ping failed: %v", err)
+		log.Infof("Ping failed: %v", err)
 		return fmt.Errorf("ping failed: %v", err)
 	}
 	conn.Close()
-	log.Println("Ping successful")
+	log.InfoPrint("Ping successful")
 	return nil
 }
 
 func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
-	log.Printf("commandRaw(): SCPI to be sent: %q", scpi)
+	log.Infof("commandRaw(): SCPI to be sent: %q", scpi)
 	if err := waitForReady(conn); err != nil {
 		return []byte{}, err
 	}
@@ -145,7 +144,7 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to set write deadline: %v", err)
 	}
 
-	log.Printf("commandRaw(): Sending SCPI: %q", scpi)
+	log.Infof("commandRaw(): Sending SCPI: %q", scpi)
 	_, err = fmt.Fprintf(conn, "%s\n", scpi)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send SCPI command: %v", err)
@@ -162,7 +161,7 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 	// response, err := reader.ReadBytes('\n')
 	// if err != nil {
 	// 	if err == io.EOF {
-	// 		log.Print("commandRaw(): Reached EOF while reading response.")
+	// 		log.Info("commandRaw(): Reached EOF while reading response.")
 	// 	} else {
 	// 		return nil, fmt.Errorf("failed to read SCPI response: %v", err)
 	// 	}
@@ -174,20 +173,20 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 	n, err := conn.Read(data)
 	if err != nil {
 		if err == io.EOF {
-			log.Print("commandRaw(): Reached EOF while reading response.")
+			log.Info("commandRaw(): Reached EOF while reading response.")
 		} else {
 			return nil, fmt.Errorf("failed to read SCPI response: %v", err)
 		}
 	}
 
-	// log.Printf("Received SCPI response of %d bytes: %q", len(response), response)
-	log.Printf("Received SCPI response of %d bytes: %q", n, string(data))
+	// log.Infof("Received SCPI response of %d bytes: %q", len(response), response)
+	log.Infof("Received SCPI response of %d bytes: %q", n, string(data))
 	// return response, nil
 	return data, nil
 }
 
 func command(conn net.Conn, scpi string) (string, error) {
-	log.Printf("SCPI to be sent: %s", scpi)
+	log.Infof("SCPI to be sent: %s", scpi)
 	if err := waitForReady(conn); err != nil {
 		return "", err
 	}
@@ -201,7 +200,7 @@ func command(conn net.Conn, scpi string) (string, error) {
 		return "", fmt.Errorf("failed to read SCPI response: %v", err)
 	}
 	response = strings.TrimSpace(response)
-	log.Printf("Received SCPI response: %q", response)
+	log.Infof("Received SCPI response: %q", response)
 	return response, nil
 }
 
@@ -213,10 +212,10 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	}
 
 	expectedBuffLengthBytes := expectedBuffBytes(buff)
-	log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
+	log.Infof("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
 	// // FIXME: Hack for testing
 	// expectedBuffLengthBytes += 1
-	// log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
+	// log.Infof("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
 
 	// Prepare buffer to hold the full response
 	data := make([]byte, expectedBuffLengthBytes)
@@ -233,16 +232,16 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 
 		// Read the remaining data directly into the buffer
 		// small := make([]byte, 1)
-		log.Printf("Requesting %d bytes...", len(data[bytesRead:]))
+		log.Infof("Requesting %d bytes...", len(data[bytesRead:]))
 		n, err := conn.Read(data[bytesRead:])
 		// n, err := conn.Read(small)
 		if err != nil {
 			if err == io.EOF {
-				log.Printf("Reached EOF after reading %d/%d bytes", bytesRead, expectedBuffLengthBytes)
+				log.Infof("Reached EOF after reading %d/%d bytes", bytesRead, expectedBuffLengthBytes)
 				break
 			}
 			// return fmt.Errorf("failed to read SCPI response: %v", err)
-			log.Printf("ABORT on last read: failed to read SCPI response: %v", err)
+			log.Infof("ABORT on last read: failed to read SCPI response: %v", err)
 			break
 		}
 		// DEBUG: Sleep 100ms
@@ -250,15 +249,15 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 
 		// data[bytesRead] = small[0]
 		bytesRead += n
-		log.Printf("Last byte read was %q", data[bytesRead-1])
+		log.Infof("Last byte read was %q", data[bytesRead-1])
 
-		log.Printf("Read %d bytes (%d/%d total. %d remaining)",
+		log.Infof("Read %d bytes (%d/%d total. %d remaining)",
 			n, bytesRead, expectedBuffLengthBytes, expectedBuffLengthBytes-bytesRead)
 	}
 
 	// // Verify if we got the full response
 	// if bytesRead < expectedBuffLengthBytes {
-	// 	log.Printf("Incomplete data: got %d out of %d bytes", bytesRead, expectedBuffLengthBytes)
+	// 	log.Infof("Incomplete data: got %d out of %d bytes", bytesRead, expectedBuffLengthBytes)
 	// 	return errors.New("failed to read all expected buffer data")
 	// }
 
@@ -347,7 +346,7 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 		if label != "" {
 			text := label
 			if i > 0 {
-				text = "CH" + string('0'+i) + ": " + label
+				text = fmt.Sprintf("CH%d: %s", i, label)
 			}
 			addRotatedLabel(newImg, text, locationX, locationY, colors[i])
 			locationX -= labelSpacing
@@ -402,13 +401,13 @@ func tmcHeaderBytes(buff []byte) int {
 func expectedDataBytes(buff []byte) int {
 	headerBytes := tmcHeaderBytes(buff)
 	expectedDataBytesStr := string(buff[2:headerBytes])
-	log.Printf("expectedDataBytesStr: %q", expectedDataBytesStr)
+	log.Infof("expectedDataBytesStr: %q", expectedDataBytesStr)
 	// convert string (decimal)	to int
 	// expectedDataBytes, err := binary.ReadVarint(strings.NewReader(expectedDataBytesStr))
 	expectedDataBytes, err := strconv.Atoi(expectedDataBytesStr)
 	// FIXME: Handle error here better
 	if err != nil {
-		log.Printf("Error converting string to int: %v", err)
+		log.Infof("Error converting string to int: %v", err)
 		panic(err)
 	}
 	return expectedDataBytes
@@ -420,7 +419,7 @@ func expectedBuffBytes(buff []byte) int {
 }
 
 // func waitForReady(conn net.Conn) error {
-// 	log.Print("waitForReady(): Sending SCPI: *OPC?")
+// 	log.Info("waitForReady(): Sending SCPI: *OPC?")
 // 	_, err := fmt.Fprintf(conn, "*OPC?\n")
 // 	if err != nil {
 // 		return fmt.Errorf("failed to send *OPC?: %v", err)
@@ -439,7 +438,7 @@ func waitForReady(conn net.Conn) error {
 	reader := bufio.NewReader(conn)
 
 	for {
-		log.Print("waitForReady(): Sending SCPI: *OPC? # May I send a command? 1==yes")
+		log.Info("waitForReady(): Sending SCPI: *OPC? # May I send a command? 1==yes")
 
 		_, err := fmt.Fprintf(conn, "*OPC?\n")
 		if err != nil {
@@ -456,16 +455,16 @@ func waitForReady(conn net.Conn) error {
 		if err != nil {
 			// If it's a timeout, continue trying
 			if ne, ok := err.(net.Error); ok && ne.Timeout() {
-				log.Print("waitForReady(): Timeout waiting for response, retrying...")
+				log.Info("waitForReady(): Timeout waiting for response, retrying...")
 				continue
 			}
 			return fmt.Errorf("failed to read *OPC? response: %v", err)
 		}
 
-		log.Print("waitForReady(): Received response!")
+		log.Info("waitForReady(): Received response!")
 
 		if strings.TrimSpace(response) == "1" {
-			log.Print("waitForReady(): Wait done")
+			log.Info("waitForReady(): Wait done")
 			break
 		}
 
