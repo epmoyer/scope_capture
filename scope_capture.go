@@ -25,7 +25,7 @@ const (
 	logFilePath    = "screen_grab.log"
 	smallWait      = 1 * time.Second
 	sendTimeout    = 1 * time.Second
-	receiveTimeout = 2 * time.Second
+	receiveTimeout = 1 * time.Second
 )
 
 func init() {
