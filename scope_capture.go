@@ -289,7 +289,9 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 	}
 
 	// Draw timestamp
-	addLabel(newImg, time.Now().Format("2006-01-02\n15:04:05"), 4, 2, color.White)
+	now := time.Now()
+	addLabel(newImg, now.Format("2006-01-02"), 4, 2, color.White)
+	addLabel(newImg, now.Format("15:04:05"), 4, 15, color.White)
 
 	// Define label colors
 	colors := []color.Color{
