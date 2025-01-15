@@ -1,3 +1,6 @@
 *.log
 *.png
 /untracked
+
+# Build targets
+*.linux.amd64
