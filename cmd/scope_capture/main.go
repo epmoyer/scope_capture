@@ -25,11 +25,10 @@ import (
 )
 
 const (
-	defaultPort    = "5555"
-	logFilePath    = "screen_grab.log"
 	smallWait      = 1 * time.Second
 	sendTimeout    = 1 * time.Second
 	receiveTimeout = 1 * time.Second
+	pingTimeout    = 2 * time.Second
 )
 
 var (
@@ -108,10 +107,13 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 	if err != nil {
 		return err
 	}
-	fmt.Println("Instrument ID:", instrumentID)
+	log.InfoPrintf("Instrument ID: %q.", instrumentID)
 
 	if filename == "" {
-		filename = fmt.Sprintf("%s_%s.png", strings.ReplaceAll(instrumentID, ",", "_"), time.Now().Format("2006-01-02_15-04-05"))
+		id := strings.ReplaceAll(instrumentID, ",", "_")
+		id = strings.ReplaceAll(id, " ", "_")
+		filename = fmt.Sprintf(
+			"%s_%s.png", id, time.Now().Format("2006-01-02_15-04-05"))
 	}
 
 	if fileType == "png" {
@@ -122,7 +124,9 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 }
 
 func testPing(hostname string) error {
-	conn, err := net.DialTimeout("tcp", hostname+":"+defaultPort, 2*time.Second)
+	ip := fmt.Sprintf("%s:%d", hostname, config.DefaultPort)
+	log.InfoPrintf("Pinging %q...", ip)
+	conn, err := net.DialTimeout("tcp", ip, pingTimeout)
 	if err != nil {
 		log.Infof("Ping failed: %v", err)
 		return fmt.Errorf("ping failed: %v", err)
@@ -205,6 +209,7 @@ func command(conn net.Conn, scpi string) (string, error) {
 }
 
 func captureScreen(conn net.Conn, filename string, note string, labels []string) error {
+	log.InfoPrint("Capturing scope screen...")
 	// Send the SCPI command to capture the screen
 	buff, err := commandRaw(conn, ":DISP:DATA? ON,OFF,PNG")
 	if err != nil {
@@ -225,7 +230,7 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	bytesRead := len(buff)
 	for bytesRead < expectedBuffLengthBytes {
 		// Set a read deadline to avoid blocking forever
-		err := conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		err := conn.SetReadDeadline(time.Now().Add(receiveTimeout))
 		if err != nil {
 			return fmt.Errorf("failed to set read deadline: %v", err)
 		}
