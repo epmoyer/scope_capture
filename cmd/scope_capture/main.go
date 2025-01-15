@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"scopecapture/pkg/moduleconfig"
 	"strconv"
 	"strings"
 	"time"
@@ -24,7 +25,6 @@ import (
 )
 
 const (
-	defaultIP      = "169.254.247.73"
 	defaultPort    = "5555"
 	logFilePath    = "screen_grab.log"
 	smallWait      = 1 * time.Second
@@ -63,9 +63,10 @@ func main() {
 	flag.BoolVar(&flagVersion, "version", false, "Print version and exit.")
 	flag.BoolVar(&flagDebug, "d", false, "Enable debug printing.")
 	flag.BoolVar(&flagDebug, "debug", false, "Enable debug printing.")
-	flag.StringVar(&flagHostname, "host", defaultIP, "Hostname or IP address of the oscilloscope")
+	flag.StringVar(&flagHostname, "host", config.DefaultIp, "Hostname or IP address of the oscilloscope")
 	flag.StringVar(&flagFilename, "file", "", "Optional name of output file")
 	flag.StringVar(&flagNote, "note", "", "Note to add to the image")
+	flag.StringVar(&flagNote, "n", "", "Note to add to the image")
 	flag.StringVar(&flagLabel1, "label1", "", "Channel 1 label")
 	flag.StringVar(&flagLabel1, "l1", "", "Channel 1 label")
 	flag.StringVar(&flagLabel2, "label2", "", "Channel 2 label")
@@ -76,6 +77,9 @@ func main() {
 	flag.StringVar(&flagLabel4, "l4", "", "Channel 4 label")
 
 	flag.Parse()
+
+	versionInfo := fmt.Sprintf("%s (%s), %s", config.AppName, config.AppTitle, moduleconfig.ModuleVersion)
+	fmt.Println(versionInfo)
 
 	if err = run(
 		flagHostname, flagFilename, "png", flagNote,
@@ -89,7 +93,7 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 		return err
 	}
 
-	conn, err := net.Dial("tcp", hostname+":"+defaultPort)
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", hostname, config.DefaultPort))
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", hostname, err)
 	}
