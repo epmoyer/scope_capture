@@ -278,13 +278,18 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	// data = data[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
 	data = data[tmcHeaderLen : bytesRead-1]
 
-	// Save the `data` to a file for debugging
-	outFileDebug, err := os.Create("raw_screenshot.DEBUG.png")
+	// Save the raw (unannotated) scope capture to a file
+	outPath := pathDirScopeCaptures + "/raw_scope_capture.png"
+	if err := os.MkdirAll(pathDirScopeCaptures, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create directory %q: %v", pathDirScopeCaptures, err)
+	}
+	outFileDebug, err := os.Create(outPath)
 	if err != nil {
 		return fmt.Errorf("failed to create DEBUG output file: %v", err)
 	}
 	defer outFileDebug.Close()
 	outFileDebug.Write(data)
+	log.InfoPrintf("Wrote raw scope capture to %q.", outPath)
 
 	// Decode the PNG image from the buffer
 	img, _, err := image.Decode(bytes.NewReader(data))
@@ -293,15 +298,22 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	}
 
 	// Create and save the image file
-	outFile, err := os.Create(filename)
+	outPath = pathDirScopeCaptures + "/" + filename
+	outFile, err := os.Create(outPath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %v", err)
 	}
 	defer outFile.Close()
 
-	// FIXME: Replace this Test Note
+	log.InfoPrint("Annotating scope capture...")
 	imgWithLabels := addLabelsToImage(img, note, labels)
-	return png.Encode(outFile, imgWithLabels)
+	err = png.Encode(outFile, imgWithLabels)
+	if err != nil {
+		return fmt.Errorf("failed to encode PNG: %v", err)
+	}
+	log.InfoPrintf("Wrote annotated scope capture to %q.", outPath)
+
+	return nil
 }
 
 func addLabelsToImage(img image.Image, note string, labels []string) image.Image {

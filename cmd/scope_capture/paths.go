@@ -1,3 +1,4 @@
 package main
 
-const pathDirLogs = "logs"
+const pathDirLogs = "./logs"
+const pathDirScopeCaptures = "./scope_captures"
