@@ -156,9 +156,11 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 		return err
 	}
 
-	expectedDataLen := expectedDataBytes(buff)
+	expectedBuffLengthBytes := expectedBuffBytes(buff)
 
-	log.Printf("Expected data bytes: %d", expectedDataLen)
+	log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
+
+	// TODO: Read the rest of the data
 	panic("stop here for development")
 
 	img, _, err := image.Decode(bytes.NewReader(buff))
@@ -210,6 +212,10 @@ func expectedDataBytes(buff []byte) int {
 		panic(err)
 	}
 	return expectedDataBytes
+}
+
+func expectedBuffBytes(buff []byte) int {
+	return tmcHeaderBytes(buff) + expectedDataBytes(buff)
 }
 
 // func waitForReady(conn net.Conn) error {
