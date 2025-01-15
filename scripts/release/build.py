@@ -79,7 +79,7 @@ def build_release(app_name, version, goos, goarch):
         "go",
         "build",
         "-o",
-        f"{path_bin}/{app_name}.{goarch}.{goos}",
+        f"{path_bin}/{app_name}_{version}.{goarch}.{goos}",
         ".",
     ]
     run(cmd, PATH_SCOPE_CAPTURE_SOURCE, environment_mods)
