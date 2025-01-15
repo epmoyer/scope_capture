@@ -11,9 +11,10 @@ import (
 	"image/draw"
 	"image/png"
 	"io"
-	"log"
 	"net"
 	"os"
+	"scopecapture/pkg/moduleconfig"
+	"scopecapture/pkg/quicklog"
 	"strconv"
 	"strings"
 	"time"
@@ -24,37 +25,70 @@ import (
 )
 
 const (
-	defaultIP      = "169.254.247.73"
-	defaultPort    = "5555"
-	logFilePath    = "screen_grab.log"
 	smallWait      = 1 * time.Second
 	sendTimeout    = 1 * time.Second
 	receiveTimeout = 1 * time.Second
+	pingTimeout    = 2 * time.Second
 )
 
-func init() {
-	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Fatalf("Failed to open log file: %v", err)
-	}
-	log.SetOutput(logFile)
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	log.Println("***** New run started...")
-}
+var (
+	log          *quicklog.LoggerT = nil // Assigned at runtime
+	flagVersion  bool
+	flagDebug    bool
+	flagHostname string
+	flagFilename string
+	flagNote     string
+	flagLabel1   string
+	flagLabel2   string
+	flagLabel3   string
+	flagLabel4   string
+)
 
 func main() {
-	fileType := flag.String("type", "png", "File type to save: png, bmp, csv")
-	hostname := flag.String("host", defaultIP, "Hostname or IP address of the oscilloscope")
-	filename := flag.String("file", "", "Optional name of output file")
-	note := flag.String("note", "", "Note")
-	label1 := flag.String("label1", "", "Channel 1 label")
-	label2 := flag.String("label2", "", "Channel 2 label")
-	label3 := flag.String("label3", "", "Channel 3 label")
-	label4 := flag.String("label4", "", "Channel 4 label")
+	var err error
+
+	// ---------------------------
+	// Parse command line arguments
+	// ---------------------------
+	flag.BoolVar(&flagVersion, "version", false, "Print version and exit.")
+	flag.BoolVar(&flagDebug, "d", false, "Enable debug printing.")
+	flag.BoolVar(&flagDebug, "debug", false, "Enable debug printing.")
+	flag.StringVar(&flagHostname, "host", config.DefaultIp, "Hostname or IP address of the oscilloscope")
+	flag.StringVar(&flagFilename, "file", "", "Optional name of output file")
+	flag.StringVar(&flagNote, "note", "", "Note to add to the image")
+	flag.StringVar(&flagNote, "n", "", "Note to add to the image")
+	flag.StringVar(&flagLabel1, "label1", "", "Channel 1 label")
+	flag.StringVar(&flagLabel1, "l1", "", "Channel 1 label")
+	flag.StringVar(&flagLabel2, "label2", "", "Channel 2 label")
+	flag.StringVar(&flagLabel2, "l2", "", "Channel 2 label")
+	flag.StringVar(&flagLabel3, "label3", "", "Channel 3 label")
+	flag.StringVar(&flagLabel3, "l3", "", "Channel 3 label")
+	flag.StringVar(&flagLabel4, "label4", "", "Channel 4 label")
+	flag.StringVar(&flagLabel4, "l4", "", "Channel 4 label")
+
 	flag.Parse()
 
-	if err := run(*hostname, *filename, *fileType, *note, []string{*label1, *label2, *label3, *label4}); err != nil {
-		log.Fatalf("Error: %v", err)
+	versionInfo := fmt.Sprintf("%s (%s), %s", config.AppName, config.AppTitle, moduleconfig.ModuleVersion)
+	fmt.Println(versionInfo)
+
+	// ------------------------
+	// Start logger
+	// ------------------------
+	config.Hostname = getComputerName()
+	loggingConfig := quicklog.ConfigT{
+		Directory:  pathDirLogs,
+		Filename:   config.Hostname + "." + config.AppName + ".log",
+		Level:      quicklog.LogLevelTrace,
+		MaxSize:    5,
+		MaxBackups: 3,
+	}
+	log = quicklog.ConfigureLogger(loggingConfig)
+	log.Info(versionInfo)
+
+	if err = run(
+		flagHostname, flagFilename, "png", flagNote,
+		[]string{flagLabel1, flagLabel2, flagLabel3, flagLabel4}); err != nil {
+		log.ErrorPrintf("%v", err)
 	}
 }
 
@@ -63,7 +97,7 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 		return err
 	}
 
-	conn, err := net.Dial("tcp", hostname+":"+defaultPort)
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", hostname, config.DefaultPort))
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", hostname, err)
 	}
@@ -73,10 +107,13 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 	if err != nil {
 		return err
 	}
-	fmt.Println("Instrument ID:", instrumentID)
+	log.InfoPrintf("Instrument ID: %q.", instrumentID)
 
 	if filename == "" {
-		filename = fmt.Sprintf("%s_%s.png", strings.ReplaceAll(instrumentID, ",", "_"), time.Now().Format("2006-01-02_15-04-05"))
+		id := strings.ReplaceAll(instrumentID, ",", "_")
+		id = strings.ReplaceAll(id, " ", "_")
+		filename = fmt.Sprintf(
+			"%s_%s.png", id, time.Now().Format("2006-01-02_15-04-05"))
 	}
 
 	if fileType == "png" {
@@ -87,18 +124,20 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 }
 
 func testPing(hostname string) error {
-	conn, err := net.DialTimeout("tcp", hostname+":"+defaultPort, 2*time.Second)
+	ip := fmt.Sprintf("%s:%d", hostname, config.DefaultPort)
+	log.InfoPrintf("Pinging %q...", ip)
+	conn, err := net.DialTimeout("tcp", ip, pingTimeout)
 	if err != nil {
-		log.Printf("Ping failed: %v", err)
+		log.Infof("Ping failed: %v", err)
 		return fmt.Errorf("ping failed: %v", err)
 	}
 	conn.Close()
-	log.Println("Ping successful")
+	log.InfoPrint("Ping successful")
 	return nil
 }
 
 func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
-	log.Printf("commandRaw(): SCPI to be sent: %q", scpi)
+	log.Infof("commandRaw(): SCPI to be sent: %q", scpi)
 	if err := waitForReady(conn); err != nil {
 		return []byte{}, err
 	}
@@ -109,7 +148,7 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to set write deadline: %v", err)
 	}
 
-	log.Printf("commandRaw(): Sending SCPI: %q", scpi)
+	log.Infof("commandRaw(): Sending SCPI: %q", scpi)
 	_, err = fmt.Fprintf(conn, "%s\n", scpi)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send SCPI command: %v", err)
@@ -121,37 +160,26 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to set read deadline: %v", err)
 	}
 
-	// Use bufio.Reader to read until newline
-	// reader := bufio.NewReader(conn)
-	// response, err := reader.ReadBytes('\n')
-	// if err != nil {
-	// 	if err == io.EOF {
-	// 		log.Print("commandRaw(): Reached EOF while reading response.")
-	// 	} else {
-	// 		return nil, fmt.Errorf("failed to read SCPI response: %v", err)
-	// 	}
-	// }
-
 	// FIXME: Hack. Just read 17 bytes.  I suspect the read above was also consuming extra
 	// bytes after the newline.
 	data := make([]byte, 17)
 	n, err := conn.Read(data)
 	if err != nil {
 		if err == io.EOF {
-			log.Print("commandRaw(): Reached EOF while reading response.")
+			log.Info("commandRaw(): Reached EOF while reading response.")
 		} else {
 			return nil, fmt.Errorf("failed to read SCPI response: %v", err)
 		}
 	}
 
-	// log.Printf("Received SCPI response of %d bytes: %q", len(response), response)
-	log.Printf("Received SCPI response of %d bytes: %q", n, string(data))
+	// log.Infof("Received SCPI response of %d bytes: %q", len(response), response)
+	log.Infof("Received SCPI response of %d bytes: %q", n, string(data))
 	// return response, nil
 	return data, nil
 }
 
 func command(conn net.Conn, scpi string) (string, error) {
-	log.Printf("SCPI to be sent: %s", scpi)
+	log.Infof("SCPI to be sent: %s", scpi)
 	if err := waitForReady(conn); err != nil {
 		return "", err
 	}
@@ -165,11 +193,12 @@ func command(conn net.Conn, scpi string) (string, error) {
 		return "", fmt.Errorf("failed to read SCPI response: %v", err)
 	}
 	response = strings.TrimSpace(response)
-	log.Printf("Received SCPI response: %q", response)
+	log.Infof("Received SCPI response: %q", response)
 	return response, nil
 }
 
 func captureScreen(conn net.Conn, filename string, note string, labels []string) error {
+	log.InfoPrint("Capturing scope screen...")
 	// Send the SCPI command to capture the screen
 	buff, err := commandRaw(conn, ":DISP:DATA? ON,OFF,PNG")
 	if err != nil {
@@ -177,10 +206,7 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	}
 
 	expectedBuffLengthBytes := expectedBuffBytes(buff)
-	log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
-	// // FIXME: Hack for testing
-	// expectedBuffLengthBytes += 1
-	// log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
+	log.Infof("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
 
 	// Prepare buffer to hold the full response
 	data := make([]byte, expectedBuffLengthBytes)
@@ -190,23 +216,23 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	bytesRead := len(buff)
 	for bytesRead < expectedBuffLengthBytes {
 		// Set a read deadline to avoid blocking forever
-		err := conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		err := conn.SetReadDeadline(time.Now().Add(receiveTimeout))
 		if err != nil {
 			return fmt.Errorf("failed to set read deadline: %v", err)
 		}
 
 		// Read the remaining data directly into the buffer
 		// small := make([]byte, 1)
-		log.Printf("Requesting %d bytes...", len(data[bytesRead:]))
+		log.Infof("Requesting %d bytes...", len(data[bytesRead:]))
 		n, err := conn.Read(data[bytesRead:])
 		// n, err := conn.Read(small)
 		if err != nil {
 			if err == io.EOF {
-				log.Printf("Reached EOF after reading %d/%d bytes", bytesRead, expectedBuffLengthBytes)
+				log.Infof("Reached EOF after reading %d/%d bytes", bytesRead, expectedBuffLengthBytes)
 				break
 			}
 			// return fmt.Errorf("failed to read SCPI response: %v", err)
-			log.Printf("ABORT on last read: failed to read SCPI response: %v", err)
+			log.Infof("ABORT on last read: failed to read SCPI response: %v", err)
 			break
 		}
 		// DEBUG: Sleep 100ms
@@ -214,15 +240,15 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 
 		// data[bytesRead] = small[0]
 		bytesRead += n
-		log.Printf("Last byte read was %q", data[bytesRead-1])
+		log.Infof("Last byte read was %q", data[bytesRead-1])
 
-		log.Printf("Read %d bytes (%d/%d total. %d remaining)",
+		log.Infof("Read %d bytes (%d/%d total. %d remaining)",
 			n, bytesRead, expectedBuffLengthBytes, expectedBuffLengthBytes-bytesRead)
 	}
 
 	// // Verify if we got the full response
 	// if bytesRead < expectedBuffLengthBytes {
-	// 	log.Printf("Incomplete data: got %d out of %d bytes", bytesRead, expectedBuffLengthBytes)
+	// 	log.Infof("Incomplete data: got %d out of %d bytes", bytesRead, expectedBuffLengthBytes)
 	// 	return errors.New("failed to read all expected buffer data")
 	// }
 
@@ -243,13 +269,18 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	// data = data[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
 	data = data[tmcHeaderLen : bytesRead-1]
 
-	// Save the `data` to a file for debugging
-	outFileDebug, err := os.Create("raw_screenshot.DEBUG.png")
+	// Save the raw (unannotated) scope capture to a file
+	outPath := pathDirScopeCaptures + "/raw_scope_capture.png"
+	if err := os.MkdirAll(pathDirScopeCaptures, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create directory %q: %v", pathDirScopeCaptures, err)
+	}
+	outFileDebug, err := os.Create(outPath)
 	if err != nil {
 		return fmt.Errorf("failed to create DEBUG output file: %v", err)
 	}
 	defer outFileDebug.Close()
 	outFileDebug.Write(data)
+	log.InfoPrintf("Wrote raw scope capture to %q.", outPath)
 
 	// Decode the PNG image from the buffer
 	img, _, err := image.Decode(bytes.NewReader(data))
@@ -258,15 +289,22 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	}
 
 	// Create and save the image file
-	outFile, err := os.Create(filename)
+	outPath = pathDirScopeCaptures + "/" + filename
+	outFile, err := os.Create(outPath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %v", err)
 	}
 	defer outFile.Close()
 
-	// FIXME: Replace this Test Note
+	log.InfoPrint("Annotating scope capture...")
 	imgWithLabels := addLabelsToImage(img, note, labels)
-	return png.Encode(outFile, imgWithLabels)
+	err = png.Encode(outFile, imgWithLabels)
+	if err != nil {
+		return fmt.Errorf("failed to encode PNG: %v", err)
+	}
+	log.InfoPrintf("Wrote annotated scope capture to %q.", outPath)
+
+	return nil
 }
 
 func addLabelsToImage(img image.Image, note string, labels []string) image.Image {
@@ -311,7 +349,7 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 		if label != "" {
 			text := label
 			if i > 0 {
-				text = "CH" + string('0'+i) + ": " + label
+				text = fmt.Sprintf("CH%d: %s", i, label)
 			}
 			addRotatedLabel(newImg, text, locationX, locationY, colors[i])
 			locationX -= labelSpacing
@@ -366,13 +404,12 @@ func tmcHeaderBytes(buff []byte) int {
 func expectedDataBytes(buff []byte) int {
 	headerBytes := tmcHeaderBytes(buff)
 	expectedDataBytesStr := string(buff[2:headerBytes])
-	log.Printf("expectedDataBytesStr: %q", expectedDataBytesStr)
+	log.Infof("expectedDataBytesStr: %q", expectedDataBytesStr)
 	// convert string (decimal)	to int
-	// expectedDataBytes, err := binary.ReadVarint(strings.NewReader(expectedDataBytesStr))
 	expectedDataBytes, err := strconv.Atoi(expectedDataBytesStr)
 	// FIXME: Handle error here better
 	if err != nil {
-		log.Printf("Error converting string to int: %v", err)
+		log.Infof("Error converting string to int: %v", err)
 		panic(err)
 	}
 	return expectedDataBytes
@@ -383,27 +420,11 @@ func expectedBuffBytes(buff []byte) int {
 	return tmcHeaderBytes(buff) + expectedDataBytes(buff) + 1
 }
 
-// func waitForReady(conn net.Conn) error {
-// 	log.Print("waitForReady(): Sending SCPI: *OPC?")
-// 	_, err := fmt.Fprintf(conn, "*OPC?\n")
-// 	if err != nil {
-// 		return fmt.Errorf("failed to send *OPC?: %v", err)
-// 	}
-// 	response, err := bufio.NewReader(conn).ReadString('\n')
-// 	if err != nil {
-// 		return fmt.Errorf("failed to read *OPC? response: %v", err)
-// 	}
-// 	if strings.TrimSpace(response) != "1" {
-// 		return errors.New("oscilloscope not ready")
-// 	}
-// 	return nil
-// }
-
 func waitForReady(conn net.Conn) error {
 	reader := bufio.NewReader(conn)
 
 	for {
-		log.Print("waitForReady(): Sending SCPI: *OPC? # May I send a command? 1==yes")
+		log.Info("waitForReady(): Sending SCPI: *OPC? # May I send a command? 1==yes")
 
 		_, err := fmt.Fprintf(conn, "*OPC?\n")
 		if err != nil {
@@ -420,16 +441,16 @@ func waitForReady(conn net.Conn) error {
 		if err != nil {
 			// If it's a timeout, continue trying
 			if ne, ok := err.(net.Error); ok && ne.Timeout() {
-				log.Print("waitForReady(): Timeout waiting for response, retrying...")
+				log.Info("waitForReady(): Timeout waiting for response, retrying...")
 				continue
 			}
 			return fmt.Errorf("failed to read *OPC? response: %v", err)
 		}
 
-		log.Print("waitForReady(): Received response!")
+		log.Info("waitForReady(): Received response!")
 
 		if strings.TrimSpace(response) == "1" {
-			log.Print("waitForReady(): Wait done")
+			log.Info("waitForReady(): Wait done")
 			break
 		}
 
@@ -438,4 +459,14 @@ func waitForReady(conn net.Conn) error {
 	}
 
 	return nil
+}
+
+func getComputerName() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+	computername := strings.Replace(hostname, ".local", "", 1)
+	fmt.Printf("hostname:%#v computername:%#v\n", hostname, computername)
+	return computername
 }
