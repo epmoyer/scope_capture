@@ -69,7 +69,9 @@ def build_release(app_name, version, goos, goarch):
     path_build_dir = PATH_BUILDS / f'{app_name}_{version}.{goarch}.{goos}'
     path_build_dir.mkdir(parents=True, exist_ok=True)
 
-    path_bin = path_build_dir / 'cmd' / 'survey'
+    # Because this app is "a single bin only", we can just copy the output binary into the
+    # dist build directory.
+    path_bin = path_build_dir
     path_bin.mkdir(parents=True, exist_ok=True)
 
     environment_mods = {'GOOS': goos, 'GOARCH': goarch}
