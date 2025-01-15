@@ -11,10 +11,10 @@ import (
 	"image/draw"
 	"image/png"
 	"io"
-	"log"
 	"net"
 	"os"
 	"scopecapture/pkg/moduleconfig"
+	"scopecapture/pkg/quicklog"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +33,7 @@ const (
 )
 
 var (
+	log          *quicklog.LoggerT = nil // Assigned at runtime
 	flagVersion  bool
 	flagDebug    bool
 	flagHostname string
@@ -43,16 +44,6 @@ var (
 	flagLabel3   string
 	flagLabel4   string
 )
-
-func init() {
-	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Fatalf("Failed to open log file: %v", err)
-	}
-	log.SetOutput(logFile)
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	log.Println("***** New run started...")
-}
 
 func main() {
 	var err error
@@ -81,10 +72,25 @@ func main() {
 	versionInfo := fmt.Sprintf("%s (%s), %s", config.AppName, config.AppTitle, moduleconfig.ModuleVersion)
 	fmt.Println(versionInfo)
 
+	// ------------------------
+	// Start logger
+	// ------------------------
+	config.Hostname = getComputerName()
+	loggingConfig := quicklog.ConfigT{
+		Directory:  pathDirLogs,
+		Filename:   config.Hostname + "." + config.AppName + ".log",
+		Level:      quicklog.LogLevelTrace,
+		MaxSize:    5,
+		MaxBackups: 3,
+	}
+	log = quicklog.ConfigureLogger(loggingConfig)
+	log.Info(versionInfo)
+
 	if err = run(
 		flagHostname, flagFilename, "png", flagNote,
 		[]string{flagLabel1, flagLabel2, flagLabel3, flagLabel4}); err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Errorf("Error: %v", err)
+		fmt.Printf("Error: %v\n", err)
 	}
 }
 
@@ -468,4 +474,14 @@ func waitForReady(conn net.Conn) error {
 	}
 
 	return nil
+}
+
+func getComputerName() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+	computername := strings.Replace(hostname, ".local", "", 1)
+	fmt.Printf("hostname:%#v computername:%#v\n", hostname, computername)
+	return computername
 }
