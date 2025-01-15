@@ -14,7 +14,7 @@ In a nutshell:
 - Adds an annotation of the current time and date to the (now blank) logo area (upper left corner)
 - Saves the capture as `{note}.png` (or, if that file already exists, as `{note}_{number}.png`) with an auto-generated number 2, 3, 4, etc. so that filenames are unique.
 
-I have included a `Sample_capture.png` file in the project:
+I have included a `Sample_capture.png` file in the project.  That output is the result of running `./scope_capture -l1="Test label 1" -l2="Test label 2" -l3="Test label 3" -l4="Test label 4" -n="Sample capture"`
 
 ![](./Sample_capture.png)
 
