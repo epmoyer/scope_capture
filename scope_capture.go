@@ -301,7 +301,9 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 	}
 
 	// Draw note and labels
-	locationY := 40
+	const labelSpacing = 16
+	locationY := 44
+	locationX := 800 - 10 - labelSpacing
 	allLabels := append([]string{note}, labels...)
 	for i, label := range allLabels {
 		if label != "" {
@@ -309,8 +311,8 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 			if i > 0 {
 				text = "CH" + string('0'+i) + ": " + label
 			}
-			addLabel(newImg, text, 10, locationY, colors[i])
-			locationY += 18
+			addRotatedLabel(newImg, text, locationX, locationY, colors[i])
+			locationX -= labelSpacing
 		}
 	}
 
@@ -326,6 +328,33 @@ func addLabel(img *image.RGBA, label string, x, y int, col color.Color) {
 		Dot:  fixed.P(x, y+13),
 	}
 	d.DrawString(label)
+}
+
+func addRotatedLabel(img *image.RGBA, label string, x, y int, col color.Color) {
+	face := basicfont.Face7x13
+	labelImg := image.NewRGBA(image.Rect(0, 0, 200, 20))
+	d := &font.Drawer{
+		Dst:  labelImg,
+		Src:  image.NewUniform(col),
+		Face: face,
+		Dot:  fixed.P(0, 13),
+	}
+	d.DrawString(label)
+
+	// Rotate 90 degrees clockwise
+	rotatedImg := rotate90(labelImg)
+	draw.Draw(img, rotatedImg.Bounds().Add(image.Pt(x, y)), rotatedImg, image.Point{}, draw.Over)
+}
+
+func rotate90(img *image.RGBA) *image.RGBA {
+	bounds := img.Bounds()
+	rotated := image.NewRGBA(image.Rect(0, 0, bounds.Dy(), bounds.Dx()))
+	for x := bounds.Min.X; x < bounds.Max.X; x++ {
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			rotated.Set(bounds.Max.Y-y-1, x, img.At(x, y))
+		}
+	}
+	return rotated
 }
 
 func tmcHeaderBytes(buff []byte) int {
