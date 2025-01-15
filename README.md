@@ -7,7 +7,7 @@
 In a nutshell:
 - Finds your scope on the LAN.
 - Grabs the current screenshot.
-- Blanks the RIGOL logo area and the (useless) "on screen button" areas at the left and right of the image.
+- Blanks the RIGOL logo area and the (irrelevant) "on screen button" areas at the left and right of the image.
 - Adds annotations to the (now blank) area on the right:
     - The note you supplied on the command line (`-n`)
     - Any signal names you supplied on the command line (`-l1`, `-l2`, `-l3`, `-l4`).
