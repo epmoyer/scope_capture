@@ -15,5 +15,7 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 - Distribution Build script:
     - Include version number in output binary name.
     - Build Linux AMD64 (not ARM64) as standard.
+- If output filename exists, append `_{number}` (before the extension) to create a unique new output filename.
+    - Will choose the next available `{number}` which does not yet exist on the filesystem.
 ## v0.0.2 2025-01-15
 (Initial release)

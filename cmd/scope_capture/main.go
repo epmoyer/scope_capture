@@ -111,7 +111,7 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 
 	if filename == "" && note != "" {
 		// Set filename to note, converted to filename-safe characters
-		filename = makeFilenameSafe(note)
+		filename = makeFilenameSafe(note) + ".png"
 	}
 	if filename == "" {
 		id := strings.ReplaceAll(instrumentID, ",", "_")
@@ -294,6 +294,7 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 
 	// Create and save the image file
 	outPath = pathDirScopeCaptures + "/" + filename
+	outPath = appendNumericSuffixOnFileExists(outPath)
 	outFile, err := os.Create(outPath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %v", err)
@@ -489,4 +490,19 @@ func makeFilenameSafe(input string) string {
 		"|", "-",
 	)
 	return replacer.Replace(input)
+}
+
+func appendNumericSuffixOnFileExists(filename string) string {
+	if _, err := os.Stat(filename); err == nil {
+		// File exists
+		base := filename[:len(filename)-4]
+		ext := filename[len(filename)-4:]
+		for i := 2; ; i++ {
+			newFilename := fmt.Sprintf("%s_%d%s", base, i, ext)
+			if _, err := os.Stat(newFilename); err != nil {
+				return newFilename
+			}
+		}
+	}
+	return filename
 }
