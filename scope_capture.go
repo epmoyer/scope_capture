@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -156,9 +156,10 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 		return err
 	}
 
-	tmcHeaderLen := tmcHeaderBytes(buff)
 	expectedDataLen := expectedDataBytes(buff)
-	buff = buff[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
+
+	log.Printf("Expected data bytes: %d", expectedDataLen)
+	panic("stop here for development")
 
 	img, _, err := image.Decode(bytes.NewReader(buff))
 	if err != nil {
@@ -197,10 +198,18 @@ func tmcHeaderBytes(buff []byte) int {
 }
 
 func expectedDataBytes(buff []byte) int {
-	numLen := int(buff[1] - '0')
-	var length int
-	binary.Read(bytes.NewReader(buff[2:2+numLen]), binary.BigEndian, &length)
-	return length
+	headerBytes := tmcHeaderBytes(buff)
+	expectedDataBytesStr := string(buff[2:headerBytes])
+	log.Printf("expectedDataBytesStr: %q", expectedDataBytesStr)
+	// convert string (decimal)	to int
+	// expectedDataBytes, err := binary.ReadVarint(strings.NewReader(expectedDataBytesStr))
+	expectedDataBytes, err := strconv.Atoi(expectedDataBytesStr)
+	// FIXME: Handle error here better
+	if err != nil {
+		log.Printf("Error converting string to int: %v", err)
+		panic(err)
+	}
+	return expectedDataBytes
 }
 
 // func waitForReady(conn net.Conn) error {
