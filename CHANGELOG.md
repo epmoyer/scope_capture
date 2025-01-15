@@ -9,5 +9,10 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 ## Unreleased
 (None)
 
+## v0.0.3 2025-01-15
+### Changed
+- Distribution Build script:
+    - Include version number in output binary name.
+    - Build Linux AMD64 (not ARM64) as standard.
 ## v0.0.2 2025-01-15
 (Initial release)
