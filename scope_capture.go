@@ -20,10 +20,12 @@ import (
 )
 
 const (
-	defaultIP   = "169.254.247.73"
-	defaultPort = "5555"
-	logFilePath = "screen_grab.log"
-	smallWait   = 1 * time.Second
+	defaultIP      = "169.254.247.73"
+	defaultPort    = "5555"
+	logFilePath    = "screen_grab.log"
+	smallWait      = 1 * time.Second
+	sendTimeout    = 1 * time.Second
+	receiveTimeout = 1 * time.Second
 )
 
 func init() {
@@ -91,8 +93,18 @@ func testPing(hostname string) error {
 }
 
 func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
-	log.Printf("SCPI to be sent: %s", scpi)
-	_, err := fmt.Fprintf(conn, "%s\n", scpi)
+	log.Printf("commandRaw(): SCPI to be sent: %q", scpi)
+	if err := waitForReady(conn); err != nil {
+		return []byte{}, err
+	}
+
+	err := conn.SetWriteDeadline(time.Now().Add(sendTimeout))
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to set write deadline: %v", err)
+	}
+
+	log.Printf("commandRaw(): Sending SCPI: %q", scpi)
+	_, err = fmt.Fprintf(conn, "%s\n", scpi)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send SCPI command: %v", err)
 	}
@@ -100,6 +112,10 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 	buff := make([]byte, 0)
 	temp := make([]byte, 1024)
 	for {
+		err = conn.SetReadDeadline(time.Now().Add(receiveTimeout))
+		if err != nil {
+			return []byte{}, fmt.Errorf("failed to set read deadline: %v", err)
+		}
 		n, err := conn.Read(temp)
 		if err != nil && err != io.EOF {
 			return nil, fmt.Errorf("failed to read SCPI response: %v", err)
@@ -115,6 +131,9 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 
 func command(conn net.Conn, scpi string) (string, error) {
 	log.Printf("SCPI to be sent: %s", scpi)
+	if err := waitForReady(conn); err != nil {
+		return "", err
+	}
 	_, err := fmt.Fprintf(conn, "%s\n", scpi)
 	if err != nil {
 		return "", fmt.Errorf("failed to send SCPI command: %v", err)
@@ -180,4 +199,61 @@ func expectedDataBytes(buff []byte) int {
 	var length int
 	binary.Read(bytes.NewReader(buff[2:2+numLen]), binary.BigEndian, &length)
 	return length
+}
+
+// func waitForReady(conn net.Conn) error {
+// 	log.Print("waitForReady(): Sending SCPI: *OPC?")
+// 	_, err := fmt.Fprintf(conn, "*OPC?\n")
+// 	if err != nil {
+// 		return fmt.Errorf("failed to send *OPC?: %v", err)
+// 	}
+// 	response, err := bufio.NewReader(conn).ReadString('\n')
+// 	if err != nil {
+// 		return fmt.Errorf("failed to read *OPC? response: %v", err)
+// 	}
+// 	if strings.TrimSpace(response) != "1" {
+// 		return errors.New("oscilloscope not ready")
+// 	}
+// 	return nil
+// }
+
+func waitForReady(conn net.Conn) error {
+	reader := bufio.NewReader(conn)
+
+	for {
+		log.Print("waitForReady(): Sending SCPI: *OPC? # May I send a command? 1==yes")
+
+		_, err := fmt.Fprintf(conn, "*OPC?\n")
+		if err != nil {
+			return fmt.Errorf("failed to send *OPC?: %v", err)
+		}
+
+		// Set a 1-second read timeout
+		err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+		if err != nil {
+			return fmt.Errorf("failed to set read deadline: %v", err)
+		}
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			// If it's a timeout, continue trying
+			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				log.Print("waitForReady(): Timeout waiting for response, retrying...")
+				continue
+			}
+			return fmt.Errorf("failed to read *OPC? response: %v", err)
+		}
+
+		log.Print("waitForReady(): Received response!")
+
+		if strings.TrimSpace(response) == "1" {
+			log.Print("waitForReady(): Wait done")
+			break
+		}
+
+		// Optional small delay to avoid spamming the device
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return nil
 }
