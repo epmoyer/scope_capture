@@ -2,6 +2,8 @@
 *.png
 /untracked
 /dist
+/cmd/scope_capture/logs
+/cmd/scope_capture/scope_captures
 
 # Build targets
 *.linux.amd64
