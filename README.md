@@ -13,11 +13,10 @@ In a nutshell:
     - Any signal names you supplied on the command line (`-l1`, `-l2`, `-l3`, `-l4`).
 - Adds an annotation of the current time and date to the (now blank) logo area (upper left corner)
 - Saves the capture as `{note}.png` (or, if that file already exists, as `{note}_{number}.png`) with an auto-generated number 2, 3, 4, etc. so that filenames are unique.
-    - 🔴 `v0.0.2` does not do this yet.
 
-I have included a `Sample capture.png` file in the project.
+I have included a `Sample_capture.png` file in the project:
 
-- 🔴 No I haven't (yet)
+![](./Sample_capture.png)
 
 ## How to run it
 
@@ -65,8 +64,6 @@ Note that many options have two forms (e.g. `-label` and `-l1`)
 ## Example usage:
 
 This will capture the current display, add the note "Sample capture", annotate signal 1 with "Signal 1 Name", and save it to the file `{note}.png`, so `Sample capture.png`.  If you run it again without deleting the original image capture file then it will save as `Sample capture_2.png` etc. (i.e. it won't ever overwrite a previous capture file, but will keep appending numbers to name the filenames unique).
-
-🔴 `v0.0.2` doesn't (yet) save the capture using the note text.  `v.1.0.0` will.
 
 ```
 $ ./scope_capture -l1="Test label 1" -l2="Test label 2" -l3="Test label 3" -l4="Test label 4" -n="Sample capture"
