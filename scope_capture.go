@@ -98,9 +98,10 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 		return []byte{}, err
 	}
 
+	// Set a write deadline for sending the command
 	err := conn.SetWriteDeadline(time.Now().Add(sendTimeout))
 	if err != nil {
-		return []byte{}, fmt.Errorf("failed to set write deadline: %v", err)
+		return nil, fmt.Errorf("failed to set write deadline: %v", err)
 	}
 
 	log.Printf("commandRaw(): Sending SCPI: %q", scpi)
@@ -109,24 +110,25 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to send SCPI command: %v", err)
 	}
 
-	buff := make([]byte, 0)
-	temp := make([]byte, 1024)
-	for {
-		err = conn.SetReadDeadline(time.Now().Add(receiveTimeout))
-		if err != nil {
-			return []byte{}, fmt.Errorf("failed to set read deadline: %v", err)
-		}
-		n, err := conn.Read(temp)
-		if err != nil && err != io.EOF {
+	// Set a read deadline for reading the response
+	err = conn.SetReadDeadline(time.Now().Add(receiveTimeout))
+	if err != nil {
+		return nil, fmt.Errorf("failed to set read deadline: %v", err)
+	}
+
+	// Use bufio.Reader to read until newline
+	reader := bufio.NewReader(conn)
+	response, err := reader.ReadBytes('\n')
+	if err != nil {
+		if err == io.EOF {
+			log.Print("commandRaw(): Reached EOF while reading response.")
+		} else {
 			return nil, fmt.Errorf("failed to read SCPI response: %v", err)
 		}
-		buff = append(buff, temp[:n]...)
-		if n == 0 || err == io.EOF {
-			break
-		}
 	}
-	log.Printf("Received SCPI response of %d bytes", len(buff))
-	return buff, nil
+
+	log.Printf("Received SCPI response of %d bytes: %q", len(response), response)
+	return response, nil
 }
 
 func command(conn net.Conn, scpi string) (string, error) {
