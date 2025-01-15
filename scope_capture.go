@@ -171,24 +171,26 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 	bytesRead := len(buff)
 	for bytesRead < expectedBuffLengthBytes {
 		// Set a read deadline to avoid blocking forever
-		err := conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+		err := conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 		if err != nil {
 			return fmt.Errorf("failed to set read deadline: %v", err)
 		}
 
 		// Read the remaining data directly into the buffer
+		log.Printf("Requesting %d bytes...", len(data[bytesRead:]))
 		n, err := conn.Read(data[bytesRead:])
 		if err != nil {
 			if err == io.EOF {
 				log.Printf("Reached EOF after reading %d/%d bytes", bytesRead, expectedBuffLengthBytes)
 				break
 			}
-			return fmt.Errorf("failed to read SCPI response. Got %d. : %v", n, err)
+			return fmt.Errorf("failed to read SCPI response: %v", err)
 		}
 
 		bytesRead += n
 
-		log.Printf("Read %d bytes (%d/%d total)", n, bytesRead, expectedBuffLengthBytes)
+		log.Printf("Read %d bytes (%d/%d total. %d remaining)",
+			n, bytesRead, expectedBuffLengthBytes, expectedBuffLengthBytes-bytesRead)
 	}
 
 	// Verify if we got the full response
