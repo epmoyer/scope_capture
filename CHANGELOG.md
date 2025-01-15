@@ -12,6 +12,8 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 ## v0.0.5 2025-01-15
 ### Changed
 - Append `.exe` to the Windows build in `build.py`.
+- Tighten up the spacing between annotation notes/labels.
+- Increase character spacing by 1 pixel.
 
 ## v0.0.4 2025-01-15
 ### Changed

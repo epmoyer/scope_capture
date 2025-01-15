@@ -343,8 +343,8 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 
 	// Draw timestamp
 	now := time.Now()
-	addLabel(newImg, now.Format("2006-01-02"), 4, 2, color.White)
-	addLabel(newImg, now.Format("15:04:05"), 4, 15, color.White)
+	addLabel(newImg, now.Format("2006-01-02"), 2, 2, color.White)
+	addLabel(newImg, now.Format("15:04:05"), 2, 15, color.White)
 
 	// Define label colors
 	colors := []color.Color{
@@ -356,7 +356,7 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 	}
 
 	// Draw note and labels
-	const labelSpacing = 16
+	const labelSpacing = 14
 	locationY := 44
 	locationX := 800 - 10 - labelSpacing
 	allLabels := append([]string{note}, labels...)
@@ -382,7 +382,12 @@ func addLabel(img *image.RGBA, label string, x, y int, col color.Color) {
 		Face: face,
 		Dot:  fixed.P(x, y+13),
 	}
-	d.DrawString(label)
+	// d.DrawString(label)
+	// Manually draw each character with additional spacing
+	for _, ch := range label {
+		d.DrawString(string(ch))
+		d.Dot.X += fixed.I(1) // Add 1 pixel of extra spacing
+	}
 }
 
 func addRotatedLabel(img *image.RGBA, label string, x, y int, col color.Color) {
@@ -394,7 +399,12 @@ func addRotatedLabel(img *image.RGBA, label string, x, y int, col color.Color) {
 		Face: face,
 		Dot:  fixed.P(0, 13),
 	}
-	d.DrawString(label)
+	// d.DrawString(label)
+	// Manually draw each character with additional spacing
+	for _, ch := range label {
+		d.DrawString(string(ch))
+		d.Dot.X += fixed.I(1) // Add 1 pixel of extra spacing
+	}
 
 	// Rotate 90 degrees clockwise
 	rotatedImg := rotate90(labelImg)
