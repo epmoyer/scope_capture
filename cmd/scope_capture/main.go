@@ -109,6 +109,10 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 	}
 	log.InfoPrintf("Instrument ID: %q.", instrumentID)
 
+	if filename == "" && note != "" {
+		// Set filename to note, converted to filename-safe characters
+		filename = makeFilenameSafe(note)
+	}
 	if filename == "" {
 		id := strings.ReplaceAll(instrumentID, ",", "_")
 		id = strings.ReplaceAll(id, " ", "_")
@@ -469,4 +473,20 @@ func getComputerName() string {
 	computername := strings.Replace(hostname, ".local", "", 1)
 	fmt.Printf("hostname:%#v computername:%#v\n", hostname, computername)
 	return computername
+}
+
+func makeFilenameSafe(input string) string {
+	replacer := strings.NewReplacer(
+		" ", "_",
+		"/", "-",
+		"\\", "-",
+		":", "-",
+		"*", "-",
+		"?", "-",
+		"\"", "-",
+		"<", "-",
+		">", "-",
+		"|", "-",
+	)
+	return replacer.Replace(input)
 }
