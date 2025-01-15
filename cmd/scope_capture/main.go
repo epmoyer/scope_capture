@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/draw"
@@ -273,6 +275,14 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	// data = data[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
 	data = data[tmcHeaderLen : bytesRead-1]
 
+	// FIXME: This is a workaround for a Rigol scope that incorrectly is generating bad PNG checksums.
+	log.InfoPrint("Auto-correcting PNG checksum...")
+	data, err = FixPNGChecksum(data)
+	if err != nil {
+		return fmt.Errorf("failed to fix PNG checksum: %v", err)
+	}
+	log.InfoPrint("Checksum corrected.")
+
 	// Save the raw (unannotated) scope capture to a file
 	outPath := pathDirScopeCaptures + "/raw_scope_capture.png"
 	if err := os.MkdirAll(pathDirScopeCaptures, os.ModePerm); err != nil {
@@ -505,4 +515,55 @@ func appendNumericSuffixOnFileExists(filename string) string {
 		}
 	}
 	return filename
+}
+
+// FixPNGChecksum takes a []byte PNG and corrects the chunk checksums.
+func FixPNGChecksum(pngData []byte) ([]byte, error) {
+	const pngHeaderSize = 8
+	const chunkHeaderSize = 8
+	const crcSize = 4
+
+	// Verify PNG signature
+	pngSignature := []byte{137, 80, 78, 71, 13, 10, 26, 10}
+	if !bytes.Equal(pngData[:pngHeaderSize], pngSignature) {
+		return nil, fmt.Errorf("invalid PNG signature")
+	}
+
+	buffer := bytes.NewBuffer(pngData[:pngHeaderSize]) // Start with the header
+	data := pngData[pngHeaderSize:]
+
+	for len(data) > 0 {
+		if len(data) < chunkHeaderSize {
+			return nil, fmt.Errorf("unexpected end of PNG data")
+		}
+
+		// Read chunk length
+		length := binary.BigEndian.Uint32(data[:4])
+		if len(data) < int(chunkHeaderSize+length+crcSize) {
+			return nil, fmt.Errorf("chunk size exceeds remaining data")
+		}
+
+		chunkType := data[4:8]
+		chunkData := data[8 : 8+length]
+		// Correct CRC: calculated over chunkType + chunkData
+		crcData := append(chunkType, chunkData...)
+		correctCRC := crc32.ChecksumIEEE(crcData)
+
+		// Write chunk length, type, data
+		buffer.Write(data[:8+length])
+		// Write corrected CRC
+		// DEBUG: Intentionally corrupt this
+		// correctCRC += 1
+		binary.Write(buffer, binary.BigEndian, correctCRC)
+
+		// Move to the next chunk
+		data = data[8+length+crcSize:]
+
+		// Stop if we hit the IEND chunk
+		if bytes.Equal(chunkType, []byte("IEND")) {
+			break
+		}
+	}
+
+	return buffer.Bytes(), nil
 }

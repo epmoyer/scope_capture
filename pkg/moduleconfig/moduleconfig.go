@@ -1,3 +1,3 @@
 package moduleconfig
 
-const ModuleVersion = "v0.0.3"
+const ModuleVersion = "v0.0.4"

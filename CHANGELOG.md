@@ -9,6 +9,10 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 ## Unreleased
 (None)
 
+## v0.0.4 2025-01-15
+### Changed
+- Auto correct PNG checksum (an experimental fix to correct a RIGOL scope which appears to be generating bad PNG checksums).
+
 ## v0.0.3 2025-01-15
 ### Changed
 - If a note is given on the command line, and an explicit filename is not given, use the note to name the output file.
