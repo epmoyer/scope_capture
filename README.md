@@ -1,6 +1,6 @@
 # scope_capture
 
-🔴 This project is still in flux, but as of v0.0.2 it appears to be working quite well.  I will update this README when it goes to v1.0.0, but for now this doc summarizes the basics.
+🔴 This project is still in flux, but as of v0.0.3 it appears to be working quite well.  I will update this README when it goes to v1.0.0, but for now this doc summarizes the basics.
 
 ## What it does.
 
