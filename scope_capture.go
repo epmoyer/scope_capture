@@ -17,6 +17,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 const (
@@ -260,25 +264,68 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 	}
 	defer outFile.Close()
 
-	imgWithLabels := addLabelsToImage(img, labels)
+	// FIXME: Replace this Test Note
+	imgWithLabels := addLabelsToImage(img, "Test Note", labels)
 	return png.Encode(outFile, imgWithLabels)
 }
 
-func addLabelsToImage(img image.Image, labels []string) image.Image {
+func addLabelsToImage(img image.Image, note string, labels []string) image.Image {
 	bounds := img.Bounds()
 	newImg := image.NewRGBA(bounds)
 	draw.Draw(newImg, bounds, img, bounds.Min, draw.Src)
-	colors := []color.Color{color.RGBA{255, 0, 0, 255}, color.RGBA{0, 255, 0, 255}, color.RGBA{0, 0, 255, 255}, color.RGBA{255, 255, 0, 255}}
-	for i, label := range labels {
+
+	// Define erasure rectangles (blackout areas)
+	eraseRects := []image.Rectangle{
+		image.Rect(3, 8, 80, 28),       // Logo
+		image.Rect(0, 37, 59, 450),     // Left menu
+		image.Rect(705, 38, 799, 436),  // Right menu items
+		image.Rect(690, 39, 704, 117),  // Right menu tab text
+		image.Rect(762, 456, 799, 479), // Lower right icon
+	}
+
+	// Fill erase areas with black
+	for _, rect := range eraseRects {
+		draw.Draw(newImg, rect, &image.Uniform{color.Black}, image.Point{}, draw.Src)
+	}
+
+	// Draw timestamp
+	addLabel(newImg, time.Now().Format("2006-01-02\n15:04:05"), 4, 2, color.White)
+
+	// Define label colors
+	colors := []color.Color{
+		color.RGBA{176, 176, 176, 255}, // Note: Gray
+		color.RGBA{247, 250, 82, 255},  // Label 1: Yellow
+		color.RGBA{0, 225, 221, 255},   // Label 2: Cyan
+		color.RGBA{221, 0, 221, 255},   // Label 3: Magenta
+		color.RGBA{0, 127, 245, 255},   // Label 4: Blue
+	}
+
+	// Draw note and labels
+	locationY := 40
+	allLabels := append([]string{note}, labels...)
+	for i, label := range allLabels {
 		if label != "" {
-			for x := 10; x < 30; x++ {
-				for y := 10 + i*30; y < 30+i*30; y++ {
-					newImg.Set(x, y, colors[i])
-				}
+			text := label
+			if i > 0 {
+				text = "CH" + string('0'+i) + ": " + label
 			}
+			addLabel(newImg, text, 10, locationY, colors[i])
+			locationY += 18
 		}
 	}
+
 	return newImg
+}
+
+func addLabel(img *image.RGBA, label string, x, y int, col color.Color) {
+	face := basicfont.Face7x13
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(col),
+		Face: face,
+		Dot:  fixed.P(x, y+13),
+	}
+	d.DrawString(label)
 }
 
 func tmcHeaderBytes(buff []byte) int {
