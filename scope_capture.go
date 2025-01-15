@@ -124,7 +124,9 @@ func command(conn net.Conn, scpi string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read SCPI response: %v", err)
 	}
-	return strings.TrimSpace(response), nil
+	response = strings.TrimSpace(response)
+	log.Printf("Received SCPI response: %q", response)
+	return response, nil
 }
 
 func captureScreen(conn net.Conn, filename string, labels []string) error {
