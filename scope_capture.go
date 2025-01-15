@@ -151,70 +151,70 @@ func command(conn net.Conn, scpi string) (string, error) {
 }
 
 func captureScreen(conn net.Conn, filename string, labels []string) error {
+	// Send the SCPI command to capture the screen
 	buff, err := commandRaw(conn, ":DISP:DATA? ON,OFF,PNG")
 	if err != nil {
 		return err
 	}
 
 	expectedBuffLengthBytes := expectedBuffBytes(buff)
-
 	log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
+	// // FIXME: Hack for testing
+	// expectedBuffLengthBytes += 1
+	// log.Printf("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
 
-	for len(buff) < expectedBuffLengthBytes {
-		log.Printf(
-			"Received LESS data than expected: (%d out of %d expected 'buff' bytes; %d remaining)",
-			len(buff),
-			expectedBuffLengthBytes,
-			expectedBuffLengthBytes-len(buff))
+	// Prepare buffer to hold the full response
+	data := make([]byte, expectedBuffLengthBytes)
+	copy(data, buff)
 
-		// Use bufio.Reader to read until newline
-		reader := bufio.NewReader(conn)
-
-		// Set a read deadline for reading the response
-		err = conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+	// Continue reading until the full expected buffer is received
+	bytesRead := len(buff)
+	for bytesRead < expectedBuffLengthBytes {
+		// Set a read deadline to avoid blocking forever
+		err := conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 		if err != nil {
 			return fmt.Errorf("failed to set read deadline: %v", err)
 		}
 
-		response, err := reader.ReadBytes('\n')
+		// Read the remaining data directly into the buffer
+		n, err := conn.Read(data[bytesRead:])
 		if err != nil {
 			if err == io.EOF {
-				log.Print("commandRaw(): Reached EOF while reading response.")
-			} else {
-				return fmt.Errorf("failed to read SCPI response: %v", err)
+				log.Printf("Reached EOF after reading %d/%d bytes", bytesRead, expectedBuffLengthBytes)
+				break
 			}
+			return fmt.Errorf("failed to read SCPI response. Got %d. : %v", n, err)
 		}
-		buff = append(buff, response...)
 
-		// wait
-		time.Sleep(100 * time.Millisecond)
+		bytesRead += n
+
+		log.Printf("Read %d bytes (%d/%d total)", n, bytesRead, expectedBuffLengthBytes)
 	}
 
-	if len(buff) < expectedBuffLengthBytes {
-		log.Printf(
-			"after reading all data chunks, 'buff' is still shorter then expected!"+
-				" (%d out of %d expected 'buff' bytes.)",
-			len(buff),
-			expectedBuffLengthBytes)
+	// Verify if we got the full response
+	if bytesRead < expectedBuffLengthBytes {
+		log.Printf("Incomplete data: got %d out of %d bytes", bytesRead, expectedBuffLengthBytes)
 		return errors.New("failed to read all expected buffer data")
 	}
 
 	// Strip TMC Blockheader and keep only the data
-	// FIXME: This truncates any extra data, which sweeps that "error" under the rug.
-	// We should handle this better by failing explicitly if the size is LARGER than expected.
-	// For now, mirroring the original behavior.
-	tmcHeaderLen := tmcHeaderBytes(buff)
-	expectedDataLen := expectedDataBytes(buff)
-	buff = buff[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
+	tmcHeaderLen := tmcHeaderBytes(data)
+	expectedDataLen := expectedDataBytes(data)
+	if len(data) < tmcHeaderLen+expectedDataLen {
+		return errors.New("buffer is too short for expected data")
+	}
+	data = data[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
 
-	img, _, err := image.Decode(bytes.NewReader(buff))
+	// Decode the PNG image from the buffer
+	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("failed to decode image: %v", err)
 	}
 
+	// Create and save the image file
 	outFile, err := os.Create(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create output file: %v", err)
 	}
 	defer outFile.Close()
 
@@ -259,7 +259,8 @@ func expectedDataBytes(buff []byte) int {
 }
 
 func expectedBuffBytes(buff []byte) int {
-	return tmcHeaderBytes(buff) + expectedDataBytes(buff)
+	// TODO: I think this last +1 is for the terminating newline.  Confirm.
+	return tmcHeaderBytes(buff) + expectedDataBytes(buff) + 1
 }
 
 // func waitForReady(conn net.Conn) error {
