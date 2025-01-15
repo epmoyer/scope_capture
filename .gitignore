@@ -1,6 +1,7 @@
 *.log
 *.png
 /untracked
+/dist
 
 # Build targets
 *.linux.amd64
