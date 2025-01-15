@@ -78,5 +78,13 @@ Annotating scope capture...
 Wrote annotated scope capture to "./scope_captures/RIGOL_TECHNOLOGIES_DS1054Z_DS1ZA221102281_00.04.04.SP4_2025-01-15_08-07-32.png".
 ```
 
+## How to build it
+
+### For yourself
+If you are just building it for yourself you can cd into `/cmd/scope_capture` and run `go get .` and `go build .`.
+
+### For distribution
+If you want to build the current version for "all platforms" then you can cd into `/scripts/release` and run `./build.py`.  That script uses the `click` library so if you don't have it you'll also need to run `pip install click` first.  That script is mostly just "for me" right now, so I haven't made any effort to create a `venv` etc. to make it nicely "distributable".
+
 ## Thanks
 This project is based on the Python scope capture utility  [https://github.com/RoGeorge/DS1054Z_screen_capture](https://github.com/RoGeorge/DS1054Z_screen_capture).  Many thanks!  That project was instrumental in figuring out how to parse the Rigol protocol.
