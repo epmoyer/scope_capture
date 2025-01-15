@@ -42,6 +42,7 @@ func main() {
 	fileType := flag.String("type", "png", "File type to save: png, bmp, csv")
 	hostname := flag.String("host", defaultIP, "Hostname or IP address of the oscilloscope")
 	filename := flag.String("file", "", "Optional name of output file")
+	// note := flag.String("note", "", "Channel 1 label")
 	label1 := flag.String("label1", "", "Channel 1 label")
 	label2 := flag.String("label2", "", "Channel 2 label")
 	label3 := flag.String("label3", "", "Channel 3 label")
