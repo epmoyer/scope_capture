@@ -3,12 +3,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"image/png"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -20,6 +23,7 @@ const (
 	defaultIP   = "169.254.247.73"
 	defaultPort = "5555"
 	logFilePath = "screen_grab.log"
+	smallWait   = 1 * time.Second
 )
 
 func init() {
@@ -86,51 +90,57 @@ func testPing(hostname string) error {
 	return nil
 }
 
-func command(conn net.Conn, scpi string) (string, error) {
+func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 	log.Printf("SCPI to be sent: %s", scpi)
-	response := ""
+	_, err := fmt.Fprintf(conn, "%s\n", scpi)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send SCPI command: %v", err)
+	}
+
+	buff := make([]byte, 0)
+	temp := make([]byte, 1024)
 	for {
-		_, err := fmt.Fprintf(conn, "*OPC?\n")
-		if err != nil {
-			return "", fmt.Errorf("failed to send *OPC?: %v", err)
+		n, err := conn.Read(temp)
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("failed to read SCPI response: %v", err)
 		}
-		log.Println("Sent SCPI: *OPC?")
-		resp, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			return "", fmt.Errorf("failed to read *OPC? response: %v", err)
-		}
-		log.Println("Received response for *OPC?", strings.TrimSpace(resp))
-		if strings.TrimSpace(resp) == "1" {
+		buff = append(buff, temp[:n]...)
+		if n == 0 || err == io.EOF {
 			break
 		}
 	}
+	log.Printf("Received SCPI response of %d bytes", len(buff))
+	return buff, nil
+}
 
+func command(conn net.Conn, scpi string) (string, error) {
+	log.Printf("SCPI to be sent: %s", scpi)
 	_, err := fmt.Fprintf(conn, "%s\n", scpi)
 	if err != nil {
 		return "", fmt.Errorf("failed to send SCPI command: %v", err)
 	}
-	log.Printf("Sent SCPI: %s", scpi)
 
-	response, err = bufio.NewReader(conn).ReadString('\n')
+	response, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("failed to read SCPI response: %v", err)
 	}
-	log.Printf("Received SCPI response: %s", strings.TrimSpace(response))
 	return strings.TrimSpace(response), nil
 }
 
 func captureScreen(conn net.Conn, filename string, labels []string) error {
-	data, err := command(conn, ":DISP:DATA? ON,OFF,PNG")
+	buff, err := commandRaw(conn, ":DISP:DATA? ON,OFF,PNG")
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Decoding image data of length %d", len(data))
-	img, _, err := image.Decode(bytes.NewReader([]byte(data)))
+	tmcHeaderLen := tmcHeaderBytes(buff)
+	expectedDataLen := expectedDataBytes(buff)
+	buff = buff[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
+
+	img, _, err := image.Decode(bytes.NewReader(buff))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decode image: %v", err)
 	}
-	log.Print("Image decoded successfully.")
 
 	outFile, err := os.Create(filename)
 	if err != nil {
@@ -145,12 +155,7 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 func addLabelsToImage(img image.Image, labels []string) image.Image {
 	bounds := img.Bounds()
 	newImg := image.NewRGBA(bounds)
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			newImg.Set(x, y, img.At(x, y))
-		}
-	}
-
+	draw.Draw(newImg, bounds, img, bounds.Min, draw.Src)
 	colors := []color.Color{color.RGBA{255, 0, 0, 255}, color.RGBA{0, 255, 0, 255}, color.RGBA{0, 0, 255, 255}, color.RGBA{255, 255, 0, 255}}
 	for i, label := range labels {
 		if label != "" {
@@ -162,4 +167,15 @@ func addLabelsToImage(img image.Image, labels []string) image.Image {
 		}
 	}
 	return newImg
+}
+
+func tmcHeaderBytes(buff []byte) int {
+	return 2 + int(buff[1]-'0')
+}
+
+func expectedDataBytes(buff []byte) int {
+	numLen := int(buff[1] - '0')
+	var length int
+	binary.Read(bytes.NewReader(buff[2:2+numLen]), binary.BigEndian, &length)
+	return length
 }
