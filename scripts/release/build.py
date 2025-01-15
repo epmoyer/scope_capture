@@ -20,10 +20,11 @@ CONFIG = {
 TARGETS = (
     # The first target is the "primary" target.  If `--all` is not specified then ONLY this
     # target will be built.
-    ('linux', 'amd64'),
+    # Format is (GOOS, GOARCH, extension)
+    ('linux', 'amd64', ''),
     # ('linux', 'arm64'),
-    ('darwin', 'arm64'),
-    ('windows', 'amd64'),
+    ('darwin', 'arm64', ''),
+    ('windows', 'amd64', '.exe'),
     # ('darwin', 'amd64'),
 )
 
@@ -58,15 +59,15 @@ def main(build_all):
         targets = [TARGETS[0]]
 
     # Build for each target
-    for goos, goarch in targets:
-        build_release(app_name, app_version, goos, goarch)
+    for goos, goarch, extension in targets:
+        build_release(app_name, app_version, goos, goarch, extension)
 
 
 def builds_exist(version):
     return bool(list(PATH_BUILDS.glob(f'*_{version}_*')))
 
 
-def build_release(app_name, version, goos, goarch):
+def build_release(app_name, version, goos, goarch, extension):
     path_build_dir = PATH_BUILDS / f'{app_name}_{version}.{goarch}.{goos}'
     path_build_dir.mkdir(parents=True, exist_ok=True)
 
@@ -80,7 +81,7 @@ def build_release(app_name, version, goos, goarch):
         "go",
         "build",
         "-o",
-        f"{path_bin}/{app_name}_{version}.{goarch}.{goos}",
+        f"{path_bin}/{app_name}_{version}.{goarch}.{goos}{extension}",
         ".",
     ]
     run(cmd, PATH_SCOPE_CAPTURE_SOURCE, environment_mods)

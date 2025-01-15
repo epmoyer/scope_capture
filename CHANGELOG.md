@@ -9,6 +9,10 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 ## Unreleased
 (None)
 
+## v0.0.5 2025-01-15
+### Changed
+- Append `.exe` to the Windows build in `build.py`.
+
 ## v0.0.4 2025-01-15
 ### Changed
 - Auto correct PNG checksum (an experimental fix to correct a RIGOL scope which appears to be generating bad PNG checksums).
