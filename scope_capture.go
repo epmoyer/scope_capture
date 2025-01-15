@@ -167,14 +167,15 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 			expectedBuffLengthBytes,
 			expectedBuffLengthBytes-len(buff))
 
+		// Use bufio.Reader to read until newline
+		reader := bufio.NewReader(conn)
+
 		// Set a read deadline for reading the response
 		err = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 		if err != nil {
 			return fmt.Errorf("failed to set read deadline: %v", err)
 		}
 
-		// Use bufio.Reader to read until newline
-		reader := bufio.NewReader(conn)
 		response, err := reader.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
