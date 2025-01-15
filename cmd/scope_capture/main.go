@@ -32,6 +32,18 @@ const (
 	receiveTimeout = 1 * time.Second
 )
 
+var (
+	flagVersion  bool
+	flagDebug    bool
+	flagHostname string
+	flagFilename string
+	flagNote     string
+	flagLabel1   string
+	flagLabel2   string
+	flagLabel3   string
+	flagLabel4   string
+)
+
 func init() {
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
@@ -43,17 +55,31 @@ func init() {
 }
 
 func main() {
-	fileType := flag.String("type", "png", "File type to save: png, bmp, csv")
-	hostname := flag.String("host", defaultIP, "Hostname or IP address of the oscilloscope")
-	filename := flag.String("file", "", "Optional name of output file")
-	note := flag.String("note", "", "Note")
-	label1 := flag.String("label1", "", "Channel 1 label")
-	label2 := flag.String("label2", "", "Channel 2 label")
-	label3 := flag.String("label3", "", "Channel 3 label")
-	label4 := flag.String("label4", "", "Channel 4 label")
+	var err error
+
+	// ---------------------------
+	// Parse command line arguments
+	// ---------------------------
+	flag.BoolVar(&flagVersion, "version", false, "Print version and exit.")
+	flag.BoolVar(&flagDebug, "d", false, "Enable debug printing.")
+	flag.BoolVar(&flagDebug, "debug", false, "Enable debug printing.")
+	flag.StringVar(&flagHostname, "host", defaultIP, "Hostname or IP address of the oscilloscope")
+	flag.StringVar(&flagFilename, "file", "", "Optional name of output file")
+	flag.StringVar(&flagNote, "note", "", "Note to add to the image")
+	flag.StringVar(&flagLabel1, "label1", "", "Channel 1 label")
+	flag.StringVar(&flagLabel1, "l1", "", "Channel 1 label")
+	flag.StringVar(&flagLabel2, "label2", "", "Channel 2 label")
+	flag.StringVar(&flagLabel2, "l2", "", "Channel 2 label")
+	flag.StringVar(&flagLabel3, "label3", "", "Channel 3 label")
+	flag.StringVar(&flagLabel3, "l3", "", "Channel 3 label")
+	flag.StringVar(&flagLabel4, "label4", "", "Channel 4 label")
+	flag.StringVar(&flagLabel4, "l4", "", "Channel 4 label")
+
 	flag.Parse()
 
-	if err := run(*hostname, *filename, *fileType, *note, []string{*label1, *label2, *label3, *label4}); err != nil {
+	if err = run(
+		flagHostname, flagFilename, "png", flagNote,
+		[]string{flagLabel1, flagLabel2, flagLabel3, flagLabel4}); err != nil {
 		log.Fatalf("Error: %v", err)
 	}
 }
