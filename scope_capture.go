@@ -171,7 +171,7 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 		reader := bufio.NewReader(conn)
 
 		// Set a read deadline for reading the response
-		err = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		err = conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 		if err != nil {
 			return fmt.Errorf("failed to set read deadline: %v", err)
 		}
