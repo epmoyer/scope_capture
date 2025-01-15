@@ -117,8 +117,20 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 	}
 
 	// Use bufio.Reader to read until newline
-	reader := bufio.NewReader(conn)
-	response, err := reader.ReadBytes('\n')
+	// reader := bufio.NewReader(conn)
+	// response, err := reader.ReadBytes('\n')
+	// if err != nil {
+	// 	if err == io.EOF {
+	// 		log.Print("commandRaw(): Reached EOF while reading response.")
+	// 	} else {
+	// 		return nil, fmt.Errorf("failed to read SCPI response: %v", err)
+	// 	}
+	// }
+
+	// FIXME: Hack. Just read 17 bytes.  I suspect the read above was also consuming extra
+	// bytes after the newline.
+	data := make([]byte, 17)
+	n, err := conn.Read(data)
 	if err != nil {
 		if err == io.EOF {
 			log.Print("commandRaw(): Reached EOF while reading response.")
@@ -127,8 +139,10 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 		}
 	}
 
-	log.Printf("Received SCPI response of %d bytes: %q", len(response), response)
-	return response, nil
+	// log.Printf("Received SCPI response of %d bytes: %q", len(response), response)
+	log.Printf("Received SCPI response of %d bytes: %q", n, string(data))
+	// return response, nil
+	return data, nil
 }
 
 func command(conn net.Conn, scpi string) (string, error) {
@@ -171,33 +185,49 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 	bytesRead := len(buff)
 	for bytesRead < expectedBuffLengthBytes {
 		// Set a read deadline to avoid blocking forever
-		err := conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		err := conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 		if err != nil {
 			return fmt.Errorf("failed to set read deadline: %v", err)
 		}
 
 		// Read the remaining data directly into the buffer
+		// small := make([]byte, 1)
 		log.Printf("Requesting %d bytes...", len(data[bytesRead:]))
 		n, err := conn.Read(data[bytesRead:])
+		// n, err := conn.Read(small)
 		if err != nil {
 			if err == io.EOF {
 				log.Printf("Reached EOF after reading %d/%d bytes", bytesRead, expectedBuffLengthBytes)
 				break
 			}
-			return fmt.Errorf("failed to read SCPI response: %v", err)
+			// return fmt.Errorf("failed to read SCPI response: %v", err)
+			log.Printf("ABORT on last read: failed to read SCPI response: %v", err)
+			break
 		}
+		// DEBUG: Sleep 100ms
+		// time.Sleep(100 * time.Millisecond)
 
+		// data[bytesRead] = small[0]
 		bytesRead += n
+		log.Printf("Last byte read was %q", data[bytesRead-1])
 
 		log.Printf("Read %d bytes (%d/%d total. %d remaining)",
 			n, bytesRead, expectedBuffLengthBytes, expectedBuffLengthBytes-bytesRead)
 	}
 
-	// Verify if we got the full response
-	if bytesRead < expectedBuffLengthBytes {
-		log.Printf("Incomplete data: got %d out of %d bytes", bytesRead, expectedBuffLengthBytes)
-		return errors.New("failed to read all expected buffer data")
-	}
+	// // Verify if we got the full response
+	// if bytesRead < expectedBuffLengthBytes {
+	// 	log.Printf("Incomplete data: got %d out of %d bytes", bytesRead, expectedBuffLengthBytes)
+	// 	return errors.New("failed to read all expected buffer data")
+	// }
+
+	// // Save the `data` to a file for debugging
+	// outFile, err := os.Create("raw_screenshot.DEBUG.png")
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create output file: %v", err)
+	// }
+	// defer outFile.Close()
+	// outFile.Write(data)
 
 	// Strip TMC Blockheader and keep only the data
 	tmcHeaderLen := tmcHeaderBytes(data)
@@ -205,7 +235,16 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 	if len(data) < tmcHeaderLen+expectedDataLen {
 		return errors.New("buffer is too short for expected data")
 	}
-	data = data[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
+	// data = data[tmcHeaderLen : tmcHeaderLen+expectedDataLen]
+	data = data[tmcHeaderLen : bytesRead-1]
+
+	// Save the `data` to a file for debugging
+	outFileDebug, err := os.Create("raw_screenshot.DEBUG.png")
+	if err != nil {
+		return fmt.Errorf("failed to create DEBUG output file: %v", err)
+	}
+	defer outFileDebug.Close()
+	outFileDebug.Write(data)
 
 	// Decode the PNG image from the buffer
 	img, _, err := image.Decode(bytes.NewReader(data))
