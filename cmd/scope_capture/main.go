@@ -160,17 +160,6 @@ func commandRaw(conn net.Conn, scpi string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to set read deadline: %v", err)
 	}
 
-	// Use bufio.Reader to read until newline
-	// reader := bufio.NewReader(conn)
-	// response, err := reader.ReadBytes('\n')
-	// if err != nil {
-	// 	if err == io.EOF {
-	// 		log.Info("commandRaw(): Reached EOF while reading response.")
-	// 	} else {
-	// 		return nil, fmt.Errorf("failed to read SCPI response: %v", err)
-	// 	}
-	// }
-
 	// FIXME: Hack. Just read 17 bytes.  I suspect the read above was also consuming extra
 	// bytes after the newline.
 	data := make([]byte, 17)
@@ -218,9 +207,6 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 
 	expectedBuffLengthBytes := expectedBuffBytes(buff)
 	log.Infof("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
-	// // FIXME: Hack for testing
-	// expectedBuffLengthBytes += 1
-	// log.Infof("expectedBuffLengthBytes: %d", expectedBuffLengthBytes)
 
 	// Prepare buffer to hold the full response
 	data := make([]byte, expectedBuffLengthBytes)
@@ -420,7 +406,6 @@ func expectedDataBytes(buff []byte) int {
 	expectedDataBytesStr := string(buff[2:headerBytes])
 	log.Infof("expectedDataBytesStr: %q", expectedDataBytesStr)
 	// convert string (decimal)	to int
-	// expectedDataBytes, err := binary.ReadVarint(strings.NewReader(expectedDataBytesStr))
 	expectedDataBytes, err := strconv.Atoi(expectedDataBytesStr)
 	// FIXME: Handle error here better
 	if err != nil {
@@ -434,22 +419,6 @@ func expectedBuffBytes(buff []byte) int {
 	// TODO: I think this last +1 is for the terminating newline.  Confirm.
 	return tmcHeaderBytes(buff) + expectedDataBytes(buff) + 1
 }
-
-// func waitForReady(conn net.Conn) error {
-// 	log.Info("waitForReady(): Sending SCPI: *OPC?")
-// 	_, err := fmt.Fprintf(conn, "*OPC?\n")
-// 	if err != nil {
-// 		return fmt.Errorf("failed to send *OPC?: %v", err)
-// 	}
-// 	response, err := bufio.NewReader(conn).ReadString('\n')
-// 	if err != nil {
-// 		return fmt.Errorf("failed to read *OPC? response: %v", err)
-// 	}
-// 	if strings.TrimSpace(response) != "1" {
-// 		return errors.New("oscilloscope not ready")
-// 	}
-// 	return nil
-// }
 
 func waitForReady(conn net.Conn) error {
 	reader := bufio.NewReader(conn)
