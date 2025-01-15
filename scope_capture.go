@@ -46,19 +46,19 @@ func main() {
 	fileType := flag.String("type", "png", "File type to save: png, bmp, csv")
 	hostname := flag.String("host", defaultIP, "Hostname or IP address of the oscilloscope")
 	filename := flag.String("file", "", "Optional name of output file")
-	// note := flag.String("note", "", "Channel 1 label")
+	note := flag.String("note", "", "Note")
 	label1 := flag.String("label1", "", "Channel 1 label")
 	label2 := flag.String("label2", "", "Channel 2 label")
 	label3 := flag.String("label3", "", "Channel 3 label")
 	label4 := flag.String("label4", "", "Channel 4 label")
 	flag.Parse()
 
-	if err := run(*hostname, *filename, *fileType, []string{*label1, *label2, *label3, *label4}); err != nil {
+	if err := run(*hostname, *filename, *fileType, *note, []string{*label1, *label2, *label3, *label4}); err != nil {
 		log.Fatalf("Error: %v", err)
 	}
 }
 
-func run(hostname, filename, fileType string, labels []string) error {
+func run(hostname, filename, fileType string, note string, labels []string) error {
 	if err := testPing(hostname); err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func run(hostname, filename, fileType string, labels []string) error {
 	}
 
 	if fileType == "png" {
-		return captureScreen(conn, filename, labels)
+		return captureScreen(conn, filename, note, labels)
 	}
 
 	return errors.New("unsupported file type")
@@ -169,7 +169,7 @@ func command(conn net.Conn, scpi string) (string, error) {
 	return response, nil
 }
 
-func captureScreen(conn net.Conn, filename string, labels []string) error {
+func captureScreen(conn net.Conn, filename string, note string, labels []string) error {
 	// Send the SCPI command to capture the screen
 	buff, err := commandRaw(conn, ":DISP:DATA? ON,OFF,PNG")
 	if err != nil {
@@ -265,7 +265,7 @@ func captureScreen(conn net.Conn, filename string, labels []string) error {
 	defer outFile.Close()
 
 	// FIXME: Replace this Test Note
-	imgWithLabels := addLabelsToImage(img, "Test Note", labels)
+	imgWithLabels := addLabelsToImage(img, note, labels)
 	return png.Encode(outFile, imgWithLabels)
 }
 
