@@ -39,10 +39,10 @@ func loadAndParseConfigFile() error {
 		// If we can't determine the home directory, just skip the second path
 		homeDir = ""
 	}
-	xdgConfigPath := filepath.Join(homeDir, ".config", "scope_capture", "scope_config.json")
+	xdgConfigPath := filepath.Join(homeDir, ".config", "scope_capture", "config.json")
 
 	pathsToTry := []string{
-		"./scope_config.json",
+		"./config.json",
 		xdgConfigPath,
 	}
 

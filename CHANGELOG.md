@@ -15,10 +15,11 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 - (internal)
     - Refactor color declarations.
 ### Added
-- Look for user config file `scope_capture.json` in `./` and then `~/.config/scope_config/scope_config.json`.
+- Look for user config file at `./config.json` and then `~/.config/capture/config.json`.
     - If found:
-        - Adopt `ip` (if declared).  Type: string
+        - Adopt `hostname` (if declared).  Type: string
         - Adopt `port` (if declared) Type: int
+- `-port` command line option.
 
 ## v0.0.5 2025-01-15
 ### Changed

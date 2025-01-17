@@ -5,7 +5,7 @@
 ## What it does.
 
 In a nutshell:
-- Finds your scope on the LAN.
+- Finds your (RIGOL) scope on the LAN.
 - Grabs the current screenshot.
 - Blanks the RIGOL logo area and the (irrelevant) "on screen button" areas at the left and right of the image.
 - Adds annotations to the (now blank) area on the right:
@@ -18,22 +18,29 @@ I have included a `Sample_capture.png` file in the project.  That output is the 
 
 ![](./Sample_capture.png)
 
-## How to run it
+This app has been developed/tested on a DS1054Z, and has been verified with a DS1104Z.  Other RIGOL scopes will probably work, but your mileage may vary.
 
-NOTE: 🔴 The default host (IP) of the scope is hard-coded as "169.254.247.73".  I will add support for a config file eventually. For now, if your scope's ip is different, then pass it on the command line.
+## PNG checksum correction
+
+In my testing I found tha the DS1104Z scope generated incorrect PNG CRCs, which was causing the PNG library to be unable to load them for annotation.  For that reason this app *always* scans the PNG file and replaces the CRCs with corrected CRCs regardless of what CRCs existed there before.  It currently (as of `v0.0.6`) does not report whether the original CRC was incorrect.
+
+In theory, this behavior means that if a corrupt PNG were received from the scope then this app might happily "correct" a CRC which was *legitimately* bad, and then crash when trying to annotate the image.  Perhaps in the future I will limit the CRC auto-correction to specific scope models and/or scope firmware versions, but for now in practice the current implementation is working consistently on all scopes I have access to.
+
+## How to run it
 
 You can see the arguments by running `./scope_capture -help` like this:
 
 ```
 $ ./scope_capture --help
-Usage of ./scope_capture:
+scope_capture (RIGOL Scope Capture), v0.0.6
+Usage of scope_capture:
   -d    Enable debug printing.
   -debug
         Enable debug printing.
   -file string
         Optional name of output file
   -host string
-        Hostname or IP address of the oscilloscope (default "169.254.247.73")
+        Hostname or IP address of the oscilloscope
   -l1 string
         Channel 1 label
   -l2 string
@@ -54,12 +61,36 @@ Usage of ./scope_capture:
         Note to add to the image
   -note string
         Note to add to the image
+  -port int
+        Port number of the oscilloscope
   -version
         Print version and exit.
 $
 ```
 
 Note that many options have two forms (e.g. `-label` and `-l1`)
+
+
+## User configuration file
+
+The app will look for a configuration file in these two locations, in order, and use the first one it finds (if any):
+- `./config.json`
+- `~/.config/capture/config.json`
+
+The config file (if you choose to use one) has the format:
+
+```json
+{
+    "hostname": "169.254.247.73",
+    "port": 5555
+}
+```
+
+The app will look for keys it knows in the config file and use any it finds.  Extra/unknown keys are ignored.
+
+If you specify `-hostname` or `-port` on the command line then those values will override the value(s) read from the config file.
+
+All config value load / override behavior is logged to the console so you can tell what values are being loaded, and from where, and see clearly what values are finally being used to communicate with the scope.
 
 ## Example usage:
 
