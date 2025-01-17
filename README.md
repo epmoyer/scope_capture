@@ -1,6 +1,6 @@
 # scope_capture
 
-🔴 This project is still in flux, but as of v0.0.3 it appears to be working quite well.  I will update this README when it goes to v1.0.0, but for now this doc summarizes the basics.
+🔴 This project is still in flux, but as of v0.0.6 it appears to be working quite well.  I will update this README when it goes to v1.0.0, but for now this doc summarizes the basics.
 
 ## What it does.
 
@@ -98,15 +98,21 @@ This will capture the current display, add the note "Sample capture", annotate s
 
 ```
 $ ./scope_capture -l1="Test label 1" -l2="Test label 2" -l3="Test label 3" -l4="Test label 4" -n="Sample capture"
-scope_capture (RIGOL Scope Capture), v0.0.2
+scope_capture (RIGOL Scope Capture), v0.0.6
 hostname:"c10-eric.local" computername:"c10-eric"
-Pinging "169.254.247.73:5555"...
-Ping successful
+Checking for config file at "./config.json"...
+    Found. Loading...
+        Adopting scope hostname from config file: "169.254.247.73"
+        Adopting scope port from config file: 5555
+Pinging scope at "169.254.247.73:5555"...
+    Ping successful
 Instrument ID: "RIGOL TECHNOLOGIES,DS1054Z,DS1ZA221102281,00.04.04.SP4".
 Capturing scope screen...
+Auto-correcting PNG checksum...
+    Checksum corrected.
 Wrote raw scope capture to "./scope_captures/raw_scope_capture.png".
 Annotating scope capture...
-Wrote annotated scope capture to "./scope_captures/RIGOL_TECHNOLOGIES_DS1054Z_DS1ZA221102281_00.04.04.SP4_2025-01-15_08-07-32.png".
+Wrote annotated scope capture to "./scope_captures/RIGOL_TECHNOLOGIES_DS1054Z_DS1ZA221102281_00.04.04.SP4_2025-01-16_19-24-33.png".
 ```
 
 ## How to build it

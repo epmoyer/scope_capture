@@ -4,6 +4,8 @@
 /dist
 /cmd/scope_capture/logs
 /cmd/scope_capture/scope_captures
+# executables
+/cmd/scope_capture/scope_capture
 
 # Build targets
 *.linux.amd64
