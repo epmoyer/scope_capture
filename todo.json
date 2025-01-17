@@ -1,0 +1,107 @@
+{
+    "version": 1,
+    "app_id": "trellis",
+    "board": {
+        "name": "scope_capture",
+        "preferences": {
+            "backgroundColor": "#a0d8a0"
+        },
+        "enable_zones": false
+    },
+    "labels": [
+        {
+            "color": "green",
+            "id": 1,
+            "name": ""
+        },
+        {
+            "color": "yellow",
+            "id": 2,
+            "name": ""
+        },
+        {
+            "color": "orange",
+            "id": 3,
+            "name": ""
+        },
+        {
+            "color": "red",
+            "id": 4,
+            "name": ""
+        },
+        {
+            "color": "purple",
+            "id": 5,
+            "name": ""
+        },
+        {
+            "color": "blue",
+            "id": 6,
+            "name": ""
+        },
+        {
+            "color": "sky",
+            "id": 7,
+            "name": ""
+        },
+        {
+            "color": "lime",
+            "id": 8,
+            "name": ""
+        },
+        {
+            "color": "pink",
+            "id": 9,
+            "name": ""
+        },
+        {
+            "color": "black",
+            "id": 10,
+            "name": ""
+        }
+    ],
+    "zones": null,
+    "lists": [
+        {
+            "cards": [
+                {
+                    "description": "",
+                    "due": null,
+                    "due_complete": false,
+                    "id": 101,
+                    "id_labels": [],
+                    "name": "Colorize console logging"
+                },
+                {
+                    "description": "",
+                    "due": null,
+                    "due_complete": false,
+                    "id": 103,
+                    "id_labels": [],
+                    "name": "Review for cleanup / refactor."
+                }
+            ],
+            "id": 2,
+            "name": "Backlog"
+        },
+        {
+            "cards": [
+                {
+                    "description": "",
+                    "due": null,
+                    "due_complete": false,
+                    "id": 102,
+                    "id_labels": [],
+                    "name": "Support config file"
+                }
+            ],
+            "id": 3,
+            "name": "Doing"
+        },
+        {
+            "cards": [],
+            "id": 4,
+            "name": "Done"
+        }
+    ]
+}

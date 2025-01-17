@@ -123,13 +123,15 @@ func main() {
 	}
 	// Now that configuration has been loaded, we can set the ip and port, and then apply the
 	// command line overrides, if any.
-	scopeHostname := config.Ip
-	scopePort := config.Port
+	scopeHostname := config.ScopeHostname
+	scopePort := config.ScopePort
 	if flagScopeHostname != "" {
 		scopeHostname = flagScopeHostname
+		log.InfoPrintf("Adopting scope hostname fom command line: %q", scopeHostname)
 	}
 	if flagScopePort != 0 {
 		scopePort = flagScopePort
+		log.InfoPrintf("Adopting scope port from command line: %d", scopePort)
 	}
 
 	err = run(
@@ -183,7 +185,7 @@ func run(
 }
 
 func testPing(hostname string) error {
-	ip := fmt.Sprintf("%s:%d", hostname, config.Port)
+	ip := fmt.Sprintf("%s:%d", hostname, config.ScopePort)
 	log.InfoPrintf("Pinging scope at %q...", ip)
 	conn, err := net.DialTimeout("tcp", ip, pingTimeout)
 	if err != nil {

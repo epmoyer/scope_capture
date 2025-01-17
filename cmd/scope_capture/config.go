@@ -8,26 +8,26 @@ import (
 )
 
 var config = configT{
-	AppTitle: "RIGOL Scope Capture",
-	AppName:  "scope_capture",
-	Ip:       "169.254.247.73",
-	Port:     5555,
+	AppTitle:      "RIGOL Scope Capture",
+	AppName:       "scope_capture",
+	ScopeHostname: "169.254.247.73",
+	ScopePort:     5555,
 	// Hostname is assigned at runtime
 	Hostname: "",
 }
 
 type configT struct {
-	AppTitle string
-	AppName  string
-	Port     int
-	Ip       string
-	Hostname string
+	AppTitle      string
+	AppName       string
+	ScopePort     int
+	ScopeHostname string
+	Hostname      string
 }
 
 // fileConfig is used only for unmarshaling JSON
 type fileConfig struct {
-	Ip   string `json:"ip"`
-	Port int    `json:"port"`
+	Hostname string `json:"hostname"`
+	Port     int    `json:"port"`
 }
 
 // loadAndParseConfigFile tries to load configuration from either
@@ -65,14 +65,14 @@ func loadAndParseConfigFile() error {
 
 			// Overwrite fields only if they're present (non-empty / non-zero)
 			itemsFound := false
-			if fc.Ip != "" {
-				config.Ip = fc.Ip
-				log.InfoPrintf("        Using IP from config file: %q", fc.Ip)
+			if fc.Hostname != "" {
+				config.ScopeHostname = fc.Hostname
+				log.InfoPrintf("        Adopting scope hostname from config file: %q", fc.Hostname)
 				itemsFound = true
 			}
 			if fc.Port != 0 {
-				config.Port = fc.Port
-				log.InfoPrintf("        Using port from config file: %d", fc.Port)
+				config.ScopePort = fc.Port
+				log.InfoPrintf("        Adopting scope port from config file: %d", fc.Port)
 				itemsFound = true
 			}
 			if !itemsFound {
