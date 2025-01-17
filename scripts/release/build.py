@@ -21,9 +21,9 @@ TARGETS = (
     # The first target is the "primary" target.  If `--all` is not specified then ONLY this
     # target will be built.
     # Format is (GOOS, GOARCH, extension)
-    ('linux', 'amd64', '.bin'),
+    ('linux', 'amd64', ''),
     # ('linux', 'arm64'),
-    ('darwin', 'arm64', '.bin'),
+    ('darwin', 'arm64', ''),
     ('windows', 'amd64', '.exe'),
     # ('darwin', 'amd64'),
 )
@@ -68,7 +68,7 @@ def builds_exist(version):
 
 
 def build_release(app_name, version, goos, goarch, extension):
-    path_build_dir = PATH_BUILDS / f'{app_name}_{version}.{goarch}.{goos}'
+    path_build_dir = PATH_BUILDS / f'{app_name}_{version}_{goarch}_{goos}'
     path_build_dir.mkdir(parents=True, exist_ok=True)
 
     # Because this app is "a single bin only", we can just copy the output binary into the

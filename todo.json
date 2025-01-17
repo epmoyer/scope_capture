@@ -88,6 +88,14 @@
                     "id_labels": [],
                     "name": "rename output dir \"scope_captures\" to something else?",
                     "repeat": null
+                },
+                {
+                    "description": "",
+                    "due": null,
+                    "due_complete": false,
+                    "id": 105,
+                    "id_labels": [],
+                    "name": "Build windows .zip automatically"
                 }
             ],
             "id": 2,
