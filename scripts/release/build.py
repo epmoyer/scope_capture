@@ -21,9 +21,9 @@ TARGETS = (
     # The first target is the "primary" target.  If `--all` is not specified then ONLY this
     # target will be built.
     # Format is (GOOS, GOARCH, extension)
-    ('linux', 'amd64', ''),
+    ('linux', 'amd64', '.bin'),
     # ('linux', 'arm64'),
-    ('darwin', 'arm64', ''),
+    ('darwin', 'arm64', '.bin'),
     ('windows', 'amd64', '.exe'),
     # ('darwin', 'amd64'),
 )
@@ -81,7 +81,7 @@ def build_release(app_name, version, goos, goarch, extension):
         "go",
         "build",
         "-o",
-        f"{path_bin}/{app_name}_{version}.{goarch}.{goos}{extension}",
+        f"{path_bin}/{app_name}_{version}_{goarch}_{goos}{extension}",
         ".",
     ]
     run(cmd, PATH_SCOPE_CAPTURE_SOURCE, environment_mods)

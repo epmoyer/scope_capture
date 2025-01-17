@@ -10,16 +10,18 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 (None)
 
 ## v0.0.6 2025-01-16
-### Changed
-- Timestamp annotation color is now a light green-blue.
-- (internal)
-    - Refactor color declarations.
 ### Added
-- Look for user config file at `./config.json` and then `~/.config/capture/config.json`.
+- Look for a config file at `./config.json` and then `~/.config/capture/config.json`.
     - If found:
         - Adopt `hostname` (if declared).  Type: string
-        - Adopt `port` (if declared) Type: int
+        - Adopt `port` (if declared).  Type: int
 - `-port` command line option.
+### Changed
+- Timestamp annotation color from white to light green-blue.
+- (internal)
+    - Refactor color declarations.
+    - (build script)
+        - Adopt `_` (instead of `.`) as separator for os and architecture. e.g. `scope_capture_v0.0.6_amd64_linux.bin`.
 
 ## v0.0.5 2025-01-15
 ### Changed
