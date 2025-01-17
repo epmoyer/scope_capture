@@ -44,6 +44,15 @@ var (
 	flagLabel2   string
 	flagLabel3   string
 	flagLabel4   string
+
+	colorTimestamp = color.RGBA{0, 219, 146, 255} // LightGreen
+	colorLabels    = []color.Color{
+		color.RGBA{176, 176, 176, 255}, // Note: Gray
+		color.RGBA{247, 250, 82, 255},  // CH1: Yellow
+		color.RGBA{0, 225, 221, 255},   // CH2: Cyan
+		color.RGBA{221, 0, 221, 255},   // CH3: Magenta
+		color.RGBA{0, 127, 245, 255},   // CH4: Blue
+	}
 )
 
 func main() {
@@ -343,17 +352,8 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 
 	// Draw timestamp
 	now := time.Now()
-	addLabel(newImg, now.Format("2006-01-02"), 2, 2, color.White)
-	addLabel(newImg, now.Format("15:04:05"), 2, 15, color.White)
-
-	// Define label colors
-	colors := []color.Color{
-		color.RGBA{176, 176, 176, 255}, // Note: Gray
-		color.RGBA{247, 250, 82, 255},  // Label 1: Yellow
-		color.RGBA{0, 225, 221, 255},   // Label 2: Cyan
-		color.RGBA{221, 0, 221, 255},   // Label 3: Magenta
-		color.RGBA{0, 127, 245, 255},   // Label 4: Blue
-	}
+	addLabel(newImg, now.Format("2006-01-02"), 2, 2, colorTimestamp)
+	addLabel(newImg, now.Format("15:04:05"), 2, 15, colorTimestamp)
 
 	// Draw note and labels
 	const labelSpacing = 14
@@ -366,7 +366,7 @@ func addLabelsToImage(img image.Image, note string, labels []string) image.Image
 			if i > 0 {
 				text = fmt.Sprintf("CH%d: %s", i, label)
 			}
-			addRotatedLabel(newImg, text, locationX, locationY, colors[i])
+			addRotatedLabel(newImg, text, locationX, locationY, colorLabels[i])
 			locationX -= labelSpacing
 		}
 	}
