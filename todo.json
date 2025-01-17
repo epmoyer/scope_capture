@@ -94,6 +94,11 @@
             "name": "Backlog"
         },
         {
+            "cards": [],
+            "id": 3,
+            "name": "Doing"
+        },
+        {
             "cards": [
                 {
                     "description": "",
@@ -104,11 +109,6 @@
                     "name": "Support config file"
                 }
             ],
-            "id": 3,
-            "name": "Doing"
-        },
-        {
-            "cards": [],
             "id": 4,
             "name": "Done"
         }
