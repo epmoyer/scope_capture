@@ -71,8 +71,11 @@ func main() {
 	flag.BoolVar(&flagVersion, "version", false, "Print version and exit.")
 	flag.BoolVar(&flagDebug, "d", false, "Enable debug printing.")
 	flag.BoolVar(&flagDebug, "debug", false, "Enable debug printing.")
-	flag.StringVar(&flagScopeHostname, "host", "", "Hostname or IP address of the oscilloscope")
-	flag.IntVar(&flagScopePort, "port", 0, "Port number of the oscilloscope")
+	flag.StringVar(&flagScopeHostname, "host", "",
+		fmt.Sprintf("Hostname or IP address of the oscilloscope (Defaults to %q)",
+			config.ScopeHostname))
+	flag.IntVar(&flagScopePort, "port", 0,
+		fmt.Sprintf("Port number of the oscilloscope (Defaults to %d)", config.ScopePort))
 	flag.StringVar(&flagFilename, "file", "", "Optional name of output file")
 	flag.StringVar(&flagNote, "note", "", "Note to add to the image")
 	flag.StringVar(&flagNote, "n", "", "Note to add to the image")

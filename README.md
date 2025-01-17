@@ -33,14 +33,15 @@ You can see the arguments by running `./scope_capture -help` like this:
 ```
 $ ./scope_capture --help
 scope_capture (RIGOL Scope Capture), v0.0.6
-Usage of scope_capture:
+Usage of ./scope_capture
+scope_capture:
   -d    Enable debug printing.
   -debug
         Enable debug printing.
   -file string
         Optional name of output file
   -host string
-        Hostname or IP address of the oscilloscope
+        Hostname or IP address of the oscilloscope (Defaults to "169.254.247.73")
   -l1 string
         Channel 1 label
   -l2 string
@@ -62,7 +63,7 @@ Usage of scope_capture:
   -note string
         Note to add to the image
   -port int
-        Port number of the oscilloscope
+        Port number of the oscilloscope (Defaults to 5555)
   -version
         Print version and exit.
 $
