@@ -34,16 +34,17 @@ const (
 )
 
 var (
-	log          *quicklog.LoggerT = nil // Assigned at runtime
-	flagVersion  bool
-	flagDebug    bool
-	flagHostname string
-	flagFilename string
-	flagNote     string
-	flagLabel1   string
-	flagLabel2   string
-	flagLabel3   string
-	flagLabel4   string
+	log               *quicklog.LoggerT = nil // Assigned at runtime
+	flagVersion       bool
+	flagDebug         bool
+	flagScopeHostname string
+	flagScopePort     int
+	flagFilename      string
+	flagNote          string
+	flagLabel1        string
+	flagLabel2        string
+	flagLabel3        string
+	flagLabel4        string
 
 	colorTimestamp = color.RGBA{0, 219, 146, 255} // LightGreen
 	colorLabels    = []color.Color{
@@ -59,12 +60,19 @@ func main() {
 	var err error
 
 	// ---------------------------
+	// Show Version
+	// ---------------------------
+	versionInfo := fmt.Sprintf("%s (%s), %s", config.AppName, config.AppTitle, moduleconfig.ModuleVersion)
+	fmt.Println(versionInfo)
+
+	// ---------------------------
 	// Parse command line arguments
 	// ---------------------------
 	flag.BoolVar(&flagVersion, "version", false, "Print version and exit.")
 	flag.BoolVar(&flagDebug, "d", false, "Enable debug printing.")
 	flag.BoolVar(&flagDebug, "debug", false, "Enable debug printing.")
-	flag.StringVar(&flagHostname, "host", config.Ip, "Hostname or IP address of the oscilloscope")
+	flag.StringVar(&flagScopeHostname, "host", "", "Hostname or IP address of the oscilloscope")
+	flag.IntVar(&flagScopePort, "port", 0, "Port number of the oscilloscope")
 	flag.StringVar(&flagFilename, "file", "", "Optional name of output file")
 	flag.StringVar(&flagNote, "note", "", "Note to add to the image")
 	flag.StringVar(&flagNote, "n", "", "Note to add to the image")
@@ -79,32 +87,53 @@ func main() {
 
 	flag.Parse()
 
-	versionInfo := fmt.Sprintf("%s (%s), %s", config.AppName, config.AppTitle, moduleconfig.ModuleVersion)
-	fmt.Println(versionInfo)
+	if flagVersion {
+		// We have already printed the version, so just exit
+		os.Exit(0)
+	}
 
 	// ------------------------
 	// Start logger
 	// ------------------------
+	logLevel := quicklog.LogLevelInfo
+	if flagDebug {
+		logLevel = quicklog.LogLevelDebug
+	}
 	config.Hostname = getComputerName()
 	loggingConfig := quicklog.ConfigT{
 		Directory:  pathDirLogs,
 		Filename:   config.Hostname + "." + config.AppName + ".log",
-		Level:      quicklog.LogLevelTrace,
+		Level:      logLevel,
 		MaxSize:    5,
 		MaxBackups: 3,
 	}
 	log = quicklog.ConfigureLogger(loggingConfig)
 	log.Info(versionInfo)
 
-	// Load the user configuration file
+	// This will only show up in the log if we enabled debug logging above
+	log.Debug("Debug logging enabled.")
+
+	// ---------------------------
+	// Load and parse config file
+	// ---------------------------
 	err = loadAndParseConfigFile()
 	if err != nil {
 		log.ErrorPrintf("Failed to load config file: %v", err)
 		os.Exit(1)
 	}
+	// Now that configuration has been loaded, we can set the ip and port, and then apply the
+	// command line overrides, if any.
+	scopeHostname := config.Ip
+	scopePort := config.Port
+	if flagScopeHostname != "" {
+		scopeHostname = flagScopeHostname
+	}
+	if flagScopePort != 0 {
+		scopePort = flagScopePort
+	}
 
 	err = run(
-		flagHostname, flagFilename, "png", flagNote,
+		scopeHostname, scopePort, flagFilename, "png", flagNote,
 		[]string{flagLabel1, flagLabel2, flagLabel3, flagLabel4})
 	if err != nil {
 		log.ErrorPrintf("%v", err)
@@ -112,14 +141,20 @@ func main() {
 	}
 }
 
-func run(hostname, filename, fileType string, note string, labels []string) error {
-	if err := testPing(hostname); err != nil {
+func run(
+	scopeHostname string,
+	scopePort int,
+	filename,
+	fileType string,
+	note string,
+	labels []string) error {
+	if err := testPing(scopeHostname); err != nil {
 		return err
 	}
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", hostname, config.Port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", scopeHostname, scopePort))
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", hostname, err)
+		return fmt.Errorf("failed to connect to %s: %w", scopeHostname, err)
 	}
 	defer conn.Close()
 
@@ -149,14 +184,14 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 
 func testPing(hostname string) error {
 	ip := fmt.Sprintf("%s:%d", hostname, config.Port)
-	log.InfoPrintf("Pinging %q...", ip)
+	log.InfoPrintf("Pinging scope at %q...", ip)
 	conn, err := net.DialTimeout("tcp", ip, pingTimeout)
 	if err != nil {
 		log.Infof("Ping failed: %v", err)
 		return fmt.Errorf("ping failed: %v", err)
 	}
 	conn.Close()
-	log.InfoPrint("Ping successful")
+	log.InfoPrint("    Ping successful")
 	return nil
 }
 
@@ -299,7 +334,7 @@ func captureScreen(conn net.Conn, filename string, note string, labels []string)
 	if err != nil {
 		return fmt.Errorf("failed to fix PNG checksum: %v", err)
 	}
-	log.InfoPrint("Checksum corrected.")
+	log.InfoPrint("    Checksum corrected.")
 
 	// Save the raw (unannotated) scope capture to a file
 	outPath := pathDirScopeCaptures + "/raw_scope_capture.png"

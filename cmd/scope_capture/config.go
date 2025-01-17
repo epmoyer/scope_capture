@@ -39,7 +39,7 @@ func loadAndParseConfigFile() error {
 		// If we can't determine the home directory, just skip the second path
 		homeDir = ""
 	}
-	xdgConfigPath := filepath.Join(homeDir, ".config", "scope_config", "scope_config.json")
+	xdgConfigPath := filepath.Join(homeDir, ".config", "scope_capture", "scope_config.json")
 
 	pathsToTry := []string{
 		"./scope_config.json",
@@ -48,31 +48,39 @@ func loadAndParseConfigFile() error {
 
 	// Try each path in turn
 	for _, path := range pathsToTry {
+		log.InfoPrintf("Checking for config file at %q...", path)
 		if _, err := os.Stat(path); err == nil {
-			log.InfoPrintf("Found config file at %q. Loading it...", path)
+			log.InfoPrint("    Found. Loading...")
 			// The file exists, attempt to load & parse it
 			file, err := os.Open(path)
 			if err != nil {
-				return fmt.Errorf("Unable to load config file: %v", err)
+				return fmt.Errorf("unable to load config file: %v", err)
 			}
 			defer file.Close()
 
 			var fc fileConfig
 			if err := json.NewDecoder(file).Decode(&fc); err != nil {
-				return fmt.Errorf("Unable to parse config JSON: %v", err)
+				return fmt.Errorf("unable to parse config JSON: %v", err)
 			}
 
 			// Overwrite fields only if they're present (non-empty / non-zero)
+			itemsFound := false
 			if fc.Ip != "" {
 				config.Ip = fc.Ip
-				log.InfoPrintf("    Using IP from config file: %q", fc.Ip)
+				log.InfoPrintf("        Using IP from config file: %q", fc.Ip)
+				itemsFound = true
 			}
 			if fc.Port != 0 {
 				config.Port = fc.Port
-				log.InfoPrintf("    Using port from config file: %d", fc.Port)
+				log.InfoPrintf("        Using port from config file: %d", fc.Port)
+				itemsFound = true
+			}
+			if !itemsFound {
+				log.InfoPrint("        WARNING: No (known) configuration items found in config file.")
 			}
 
 			// Once we've successfully read one config file, we stop
+			log.Debugf("config: %#v", config)
 			return nil
 		}
 	}
