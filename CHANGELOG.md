@@ -9,6 +9,17 @@ to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 ## Unreleased
 (None)
 
+## v0.0.6 2025-01-16
+### Changed
+- Timestamp annotation color is now a light green-blue.
+- (internal)
+    - Refactor color declarations.
+### Added
+- Look for user config file `scope_capture.json` in `./` and then `~/.config/scope_config/scope_config.json`.
+    - If found:
+        - Adopt `ip` (if declared).  Type: string
+        - Adopt `port` (if declared) Type: int
+
 ## v0.0.5 2025-01-15
 ### Changed
 - Append `.exe` to the Windows build in `build.py`.

@@ -64,7 +64,7 @@ func main() {
 	flag.BoolVar(&flagVersion, "version", false, "Print version and exit.")
 	flag.BoolVar(&flagDebug, "d", false, "Enable debug printing.")
 	flag.BoolVar(&flagDebug, "debug", false, "Enable debug printing.")
-	flag.StringVar(&flagHostname, "host", config.DefaultIp, "Hostname or IP address of the oscilloscope")
+	flag.StringVar(&flagHostname, "host", config.Ip, "Hostname or IP address of the oscilloscope")
 	flag.StringVar(&flagFilename, "file", "", "Optional name of output file")
 	flag.StringVar(&flagNote, "note", "", "Note to add to the image")
 	flag.StringVar(&flagNote, "n", "", "Note to add to the image")
@@ -96,10 +96,19 @@ func main() {
 	log = quicklog.ConfigureLogger(loggingConfig)
 	log.Info(versionInfo)
 
-	if err = run(
+	// Load the user configuration file
+	err = loadAndParseConfigFile()
+	if err != nil {
+		log.ErrorPrintf("Failed to load config file: %v", err)
+		os.Exit(1)
+	}
+
+	err = run(
 		flagHostname, flagFilename, "png", flagNote,
-		[]string{flagLabel1, flagLabel2, flagLabel3, flagLabel4}); err != nil {
+		[]string{flagLabel1, flagLabel2, flagLabel3, flagLabel4})
+	if err != nil {
 		log.ErrorPrintf("%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -108,7 +117,7 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 		return err
 	}
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", hostname, config.DefaultPort))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", hostname, config.Port))
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", hostname, err)
 	}
@@ -139,7 +148,7 @@ func run(hostname, filename, fileType string, note string, labels []string) erro
 }
 
 func testPing(hostname string) error {
-	ip := fmt.Sprintf("%s:%d", hostname, config.DefaultPort)
+	ip := fmt.Sprintf("%s:%d", hostname, config.Port)
 	log.InfoPrintf("Pinging %q...", ip)
 	conn, err := net.DialTimeout("tcp", ip, pingTimeout)
 	if err != nil {
